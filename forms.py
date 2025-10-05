@@ -1,5 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, TextAreaField, BooleanField, SelectField, IntegerField
+from wtforms.fields import DateTimeLocalField
 from wtforms.validators import DataRequired, Length, Optional, NumberRange
 from wtforms import SubmitField
 
@@ -48,6 +49,13 @@ class BlogPostForm(FlaskForm):
     published = BooleanField("Published")
 
     featured = BooleanField("Featured")
+
+    published_at = DateTimeLocalField(
+        "Published At",
+        format="%Y-%m-%dT%H:%M",
+        validators=[Optional()],
+        render_kw={"placeholder": "YYYY-MM-DDTHH:MM"},
+    )
 
 
 class CategoryForm(FlaskForm):

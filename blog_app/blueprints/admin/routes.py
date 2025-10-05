@@ -15,7 +15,7 @@ from flask import (
 from flask_login import current_user, login_required
 from markupsafe import Markup
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy import or_
+from sqlalchemy import or_, nullslast
 
 from blog_app.extensions import db
 from blog_app.utils.database import safe_db_add, safe_db_commit
@@ -43,6 +43,7 @@ def admin_dashboard():
     tag_id = request.args.get('tag', type=int)
     query_text = request.args.get('q', default='', type=str)
     page = request.args.get('page', default=1, type=int)
+    status = request.args.get('status', default='', type=str)
 
     q = BlogPost.query
     if category_id:
@@ -52,13 +53,32 @@ def admin_dashboard():
     if query_text:
         like = f"%{query_text}%"
         q = q.filter(or_(BlogPost.title.ilike(like), BlogPost.excerpt.ilike(like), BlogPost.author.ilike(like)))
+    if status == 'published':
+        q = q.filter(BlogPost.published.is_(True))
+    elif status == 'draft':
+        q = q.filter(BlogPost.published.is_(False), BlogPost.published_at.is_(None))
+    elif status == 'scheduled':
+        from datetime import datetime as _dt
+        now = _dt.utcnow()
+        q = q.filter(BlogPost.published.is_(False), BlogPost.published_at.is_not(None), BlogPost.published_at > now)
 
     from flask import current_app
     per_page = current_app.config.get('ADMIN_POSTS_PER_PAGE', 10)
-    pagination = db.paginate(q.order_by(BlogPost.created_at.desc()), page=page, per_page=per_page, error_out=False)
+    # Sort by published_at desc, drafts (NULL) last; fallback by created_at desc
+    pagination = db.paginate(
+        q.order_by(
+            nullslast(BlogPost.published_at.desc()),
+            BlogPost.created_at.desc(),
+        ),
+        page=page,
+        per_page=per_page,
+        error_out=False,
+    )
 
     categories = Category.query.order_by(Category.name.asc()).all()
     tags = Tag.query.order_by(Tag.name.asc()).all()
+    from datetime import datetime as _dt
+    now = _dt.utcnow()
     return render_template(
         "admin/dashboard.html",
         posts=pagination.items,
@@ -68,6 +88,8 @@ def admin_dashboard():
         selected_category=category_id,
         selected_tag=tag_id,
         search_query=query_text,
+        selected_status=status,
+        now=now,
     )
 
 
@@ -100,7 +122,7 @@ def admin_new_post():
                     db.session.add(tag)
                 post.tag_items.append(tag)
         if form.published.data:
-            post.published_at = datetime.utcnow()
+            post.published_at = form.published_at.data or datetime.utcnow()
 
         try:
             db.session.add(post)
@@ -139,6 +161,10 @@ def admin_edit_post(post_id):
         form.category.data = str(post.category_obj.id) if getattr(post, 'category_obj', None) else ""
         if getattr(post, 'tag_items', None):
             form.tags.data = ", ".join(t.name for t in post.tag_items)
+        # Pre-fill published_at
+        if post.published_at:
+            # DateTimeLocalField expects naive in local; we pass the stored naive value
+            form.published_at.data = post.published_at
     if form.validate_on_submit():
         post.title = form.title.data
         post.slug = form.slug.data
@@ -162,7 +188,10 @@ def admin_edit_post(post_id):
                 post.tag_items.append(tag)
         was_published = post.published
         post.published = form.published.data
-        if form.published.data and not was_published:
+        # Apply published_at edits if provided; if publishing without a value, set now
+        if form.published_at.data:
+            post.published_at = form.published_at.data
+        elif form.published.data and not post.published_at:
             post.published_at = datetime.utcnow()
         post.featured = form.featured.data
 

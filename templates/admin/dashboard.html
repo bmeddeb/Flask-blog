@@ -25,8 +25,14 @@
     </select>
     <label>Search</label>
     <input type="text" name="q" class="form-control" placeholder="Title, excerpt, author" value="{{ search_query or '' }}" style="min-width: 240px;">
+    <label>Status</label>
+    <select name="status" class="form-control" style="min-width: 140px;">
+        <option value="" {% if not selected_status %}selected{% endif %}>All</option>
+        <option value="published" {% if selected_status == 'published' %}selected{% endif %}>Published</option>
+        <option value="draft" {% if selected_status == 'draft' %}selected{% endif %}>Draft</option>
+    </select>
     <button type="submit" class="btn">Filter</button>
-    {% if selected_category or selected_tag %}
+    {% if selected_category or selected_tag or search_query or selected_status %}
     <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary">Clear</a>
     {% endif %}
   </form>
@@ -39,7 +45,7 @@
             <th>Author</th>
             <th>Category</th>
             <th>Status</th>
-            <th>Created</th>
+            <th>Published</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -58,11 +64,19 @@
             <td>
                 {% if post.published %}
                     <span class="badge badge-success">Published</span>
+                {% elif post.published_at and post.published_at > now %}
+                    <span class="badge badge-info">Scheduled</span>
                 {% else %}
                     <span class="badge badge-warning">Draft</span>
                 {% endif %}
             </td>
-            <td>{{ post.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td>
+                {% if post.published_at %}
+                    {{ post.published_at.strftime('%Y-%m-%d %H:%M') }}
+                {% else %}
+                    —
+                {% endif %}
+            </td>
             <td>
                 <div class="post-actions">
                     <a href="{{ url_for('admin.admin_edit_post', post_id=post.id) }}" class="btn btn-small btn-secondary">Edit</a>

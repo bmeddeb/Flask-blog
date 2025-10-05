@@ -5,6 +5,7 @@ from flask_migrate import upgrade
 
 from blog_app.extensions import db
 from blog_app.utils.database import safe_db_add
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +20,6 @@ def register_cli(app):
     @app.cli.command("seed-db")
     def seed_db():
         """Seed the database with sample posts."""
-        from datetime import datetime
-
         from models import BlogPost
 
         if BlogPost.query.first():
@@ -44,3 +43,23 @@ def register_cli(app):
         except Exception as e:
             logger.error(f"Error seeding database: {str(e)}")
             print(f"Failed to seed database: {str(e)}")
+
+    @app.cli.command("publish-scheduled")
+    def publish_scheduled():
+        """Publish scheduled posts whose publish time has arrived."""
+        from models import BlogPost
+
+        now = datetime.utcnow()
+        posts = (
+            BlogPost.query
+            .filter(BlogPost.published.is_(False))
+            .filter(BlogPost.published_at.isnot(None))
+            .filter(BlogPost.published_at <= now)
+            .all()
+        )
+        count = 0
+        for p in posts:
+            p.published = True
+            count += 1
+        db.session.commit()
+        print(f"Published {count} scheduled post(s) at {now.isoformat()} UTC")
