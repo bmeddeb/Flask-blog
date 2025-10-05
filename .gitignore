@@ -49,3 +49,5 @@ AGENTS.md
 # OS
 .DS_Store
 Thumbs.db
+logs/
+static/uploads/
