@@ -165,6 +165,12 @@
 
     <div style="margin-top: 80px;"></div>
 
+    {% if is_preview %}
+    <div style="background: #fff3cd; border-left: 4px solid #856404; padding: 1rem 2rem; margin: 1rem auto; max-width: 800px; color: #856404; font-weight: 500;">
+        📝 Preview Mode - This post is not published yet
+    </div>
+    {% endif %}
+
     <main>
         <article class="post-content">
             <div class="post-header">

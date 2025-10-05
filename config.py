@@ -33,6 +33,13 @@ class Config:
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'}
 
+    # Image processing configuration
+    IMAGE_MAX_WIDTH = 1920  # Maximum width for uploaded images
+    IMAGE_MAX_HEIGHT = 1920  # Maximum height for uploaded images
+    IMAGE_QUALITY = 85  # JPEG quality (1-100)
+    IMAGE_THUMBNAIL_SIZE = (400, 400)  # Thumbnail size
+    IMAGE_SOCIAL_SIZE = (1200, 630)  # Social media share size
+
 
 class DevelopmentConfig(Config):
     """Development configuration."""

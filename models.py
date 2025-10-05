@@ -83,3 +83,40 @@ class User(UserMixin, db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'last_login': self.last_login.isoformat() if self.last_login else None,
         }
+
+
+class Setting(db.Model):
+    """Model for application settings (key-value store)."""
+
+    __tablename__ = 'settings'
+
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(100), unique=True, nullable=False)
+    value = db.Column(db.Text, nullable=False)
+    description = db.Column(db.String(500))
+
+    # Timestamps
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<Setting {self.key}={self.value}>'
+
+    @staticmethod
+    def get(key, default=None):
+        """Get a setting value by key."""
+        setting = Setting.query.filter_by(key=key).first()
+        return setting.value if setting else default
+
+    @staticmethod
+    def set(key, value, description=None):
+        """Set a setting value."""
+        setting = Setting.query.filter_by(key=key).first()
+        if setting:
+            setting.value = str(value)
+            if description:
+                setting.description = description
+        else:
+            setting = Setting(key=key, value=str(value), description=description)
+            db.session.add(setting)
+        db.session.commit()
+        return setting

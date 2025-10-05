@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, BooleanField, SelectField
-from wtforms.validators import DataRequired, Length, Optional
+from wtforms import StringField, TextAreaField, BooleanField, SelectField, IntegerField
+from wtforms.validators import DataRequired, Length, Optional, NumberRange
 
 
 class BlogPostForm(FlaskForm):
@@ -58,3 +58,26 @@ class BlogPostForm(FlaskForm):
     published = BooleanField('Published')
 
     featured = BooleanField('Featured')
+
+
+class SettingsForm(FlaskForm):
+    """Form for application settings."""
+
+    # Image processing settings
+    image_max_width = IntegerField(
+        'Maximum Image Width',
+        validators=[DataRequired(), NumberRange(min=100, max=4000)],
+        render_kw={'placeholder': '1920'}
+    )
+
+    image_max_height = IntegerField(
+        'Maximum Image Height',
+        validators=[DataRequired(), NumberRange(min=100, max=4000)],
+        render_kw={'placeholder': '1920'}
+    )
+
+    image_quality = IntegerField(
+        'JPEG Quality',
+        validators=[DataRequired(), NumberRange(min=1, max=100)],
+        render_kw={'placeholder': '85'}
+    )

@@ -198,6 +198,7 @@
                 <li><a href="{{ url_for('index') }}">View Site</a></li>
                 <li><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
                 <li><a href="{{ url_for('admin_new_post') }}">New Post</a></li>
+                <li><a href="{{ url_for('admin_settings') }}">Settings</a></li>
                 {% if current_user.is_authenticated %}
                 <li style="display: flex; align-items: center; gap: 0.5rem;">
                     {% if current_user.avatar_url %}

@@ -8,11 +8,19 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css" />
 <style>
     #editor {
-        margin-bottom: 1.5rem;
+        margin-bottom: 1rem;
     }
     .toastui-editor-defaultUI {
         border: 1px solid var(--border-color);
         border-radius: 6px;
+    }
+    /* Compact form layout */
+    .post-form-container .form-group {
+        margin-bottom: 1rem;
+    }
+    .post-form-container small {
+        margin-top: 0.25rem;
+        display: block;
     }
 </style>
 {% endblock %}
@@ -23,7 +31,7 @@
     <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
 </div>
 
-<div class="card" style="max-width: 900px;">
+<div class="card post-form-container" style="max-width: 1100px;">
     <form method="POST" novalidate>
         {{ form.hidden_tag() }}
 
@@ -68,7 +76,7 @@
             {% endif %}
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
             <div class="form-group">
                 {{ form.author.label }}
                 {{ form.author(class="form-control") }}
@@ -94,7 +102,7 @@
             {% endif %}
         </div>
 
-        <div style="display: flex; gap: 2rem; margin-bottom: 2rem;">
+        <div style="display: flex; gap: 2rem; margin-bottom: 1.5rem;">
             <div class="form-group" style="margin-bottom: 0;">
                 <label class="checkbox-label">
                     {{ form.published() }}

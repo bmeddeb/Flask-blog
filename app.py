@@ -3,7 +3,9 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from werkzeug.utils import secure_filename
+from PIL import Image
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash, session, send_from_directory
+from markupsafe import Markup
 from flask_migrate import Migrate
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from authlib.integrations.flask_client import OAuth
@@ -12,8 +14,8 @@ import markdown
 from markdown.extensions.codehilite import CodeHiliteExtension
 from markdown.extensions.fenced_code import FencedCodeExtension
 from markdown.extensions.tables import TableExtension
-from models import db, BlogPost, User
-from forms import BlogPostForm
+from models import db, BlogPost, User, Setting
+from forms import BlogPostForm, SettingsForm
 from config import config
 
 # Load environment variables
@@ -78,6 +80,39 @@ def render_markdown(text):
         'sane_lists',  # Better list handling
     ])
     return md.convert(text)
+
+
+def process_image(image_path, max_width=None, max_height=None, quality=None):
+    """Process an image: resize, optimize, and convert to RGB if needed."""
+    if max_width is None:
+        max_width = int(Setting.get('image_max_width', app.config['IMAGE_MAX_WIDTH']))
+    if max_height is None:
+        max_height = int(Setting.get('image_max_height', app.config['IMAGE_MAX_HEIGHT']))
+    if quality is None:
+        quality = int(Setting.get('image_quality', app.config['IMAGE_QUALITY']))
+
+    # Open the image
+    img = Image.open(image_path)
+
+    # Convert to RGB if necessary (for PNG with transparency, etc.)
+    if img.mode in ('RGBA', 'LA', 'P'):
+        # Create a white background
+        background = Image.new('RGB', img.size, (255, 255, 255))
+        if img.mode == 'P':
+            img = img.convert('RGBA')
+        background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+        img = background
+    elif img.mode != 'RGB':
+        img = img.convert('RGB')
+
+    # Resize if image is larger than max dimensions
+    if img.width > max_width or img.height > max_height:
+        img.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
+
+    # Save optimized image
+    img.save(image_path, 'JPEG', quality=quality, optimize=True)
+
+    return img
 
 
 # Create tables and upload folder
@@ -233,7 +268,11 @@ def admin_new_post():
         db.session.add(post)
         db.session.commit()
 
-        flash('Post created successfully!', 'success')
+        if form.published.data:
+            view_url = url_for('blog_post', slug=post.slug)
+            flash(Markup(f'Post created successfully! <a href="{view_url}" target="_blank" style="color: #155724; text-decoration: underline; font-weight: 600;">View Post →</a>'), 'success')
+        else:
+            flash('Post created successfully as draft!', 'success')
         return redirect(url_for('admin_dashboard'))
 
     # Set default author
@@ -269,10 +308,24 @@ def admin_edit_post(post_id):
 
         db.session.commit()
 
-        flash('Post updated successfully!', 'success')
+        if form.published.data:
+            view_url = url_for('blog_post', slug=post.slug)
+            flash(Markup(f'Post updated successfully! <a href="{view_url}" target="_blank" style="color: #155724; text-decoration: underline; font-weight: 600;">View Post →</a>'), 'success')
+        else:
+            flash('Post updated successfully!', 'success')
         return redirect(url_for('admin_dashboard'))
 
     return render_template('admin/post_form.html', form=form, title='Edit Post', post=post)
+
+
+@app.route('/admin/posts/<int:post_id>/preview')
+@login_required
+def admin_preview_post(post_id):
+    """Preview a blog post (published or draft)."""
+    post = BlogPost.query.get_or_404(post_id)
+    # Render markdown to HTML
+    post_html = render_markdown(post.content)
+    return render_template('blog_post.html', post=post, post_html=post_html, is_preview=True)
 
 
 @app.route('/admin/posts/<int:post_id>/delete', methods=['POST'])
@@ -285,6 +338,29 @@ def admin_delete_post(post_id):
 
     flash('Post deleted successfully!', 'success')
     return redirect(url_for('admin_dashboard'))
+
+
+@app.route('/admin/settings', methods=['GET', 'POST'])
+@login_required
+def admin_settings():
+    """Admin settings page."""
+    form = SettingsForm()
+
+    if form.validate_on_submit():
+        # Save image processing settings
+        Setting.set('image_max_width', form.image_max_width.data, 'Maximum width for uploaded images')
+        Setting.set('image_max_height', form.image_max_height.data, 'Maximum height for uploaded images')
+        Setting.set('image_quality', form.image_quality.data, 'JPEG quality (1-100)')
+
+        flash('Settings updated successfully!', 'success')
+        return redirect(url_for('admin_settings'))
+
+    # Load current settings or use defaults
+    form.image_max_width.data = int(Setting.get('image_max_width', app.config['IMAGE_MAX_WIDTH']))
+    form.image_max_height.data = int(Setting.get('image_max_height', app.config['IMAGE_MAX_HEIGHT']))
+    form.image_quality.data = int(Setting.get('image_quality', app.config['IMAGE_QUALITY']))
+
+    return render_template('admin/settings.html', form=form)
 
 
 @app.route('/admin/upload-image', methods=['POST'])
@@ -300,13 +376,20 @@ def upload_image():
         return jsonify({'error': 'No file selected'}), 400
 
     if file and allowed_file(file.filename):
-        # Generate unique filename
-        ext = file.filename.rsplit('.', 1)[1].lower()
-        filename = f"{uuid.uuid4().hex}.{ext}"
+        # Generate unique filename (always .jpg as we convert to JPEG)
+        filename = f"{uuid.uuid4().hex}.jpg"
 
-        # Save file
+        # Save file temporarily
         filepath = app.config['UPLOAD_FOLDER'] / filename
         file.save(filepath)
+
+        # Process image (resize, optimize, convert to JPEG)
+        try:
+            process_image(filepath)
+        except Exception as e:
+            # If processing fails, remove the file and return error
+            filepath.unlink(missing_ok=True)
+            return jsonify({'error': f'Image processing failed: {str(e)}'}), 400
 
         # Return URL for Toast UI Editor
         url = url_for('static', filename=f'uploads/{filename}')
