@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog Posts</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="bg-grid"></div>
+
+    <nav>
+        <div class="nav-container">
+            <div class="logo">MyBlog</div>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('index') }}">Home</a></li>
+                <li><a href="{{ url_for('blog_list') }}">Blog</a></li>
+                <li><a href="{{ url_for('admin_dashboard') }}">Admin</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="hero" style="padding: 4rem 2rem 2rem;">
+        <h1 style="font-size: 2.5rem;">Blog Posts</h1>
+        <p>Read my latest thoughts and insights</p>
+    </div>
+
+    <main>
+        <section class="section">
+            {% if posts %}
+            <div class="cards-grid">
+                {% for post in posts %}
+                <div class="card">
+                    {% if post.category %}
+                    <span class="card-tag">{{ post.category }}</span>
+                    {% endif %}
+                    <h3>{{ post.title }}</h3>
+                    <p>{{ post.excerpt or post.content[:150] + '...' }}</p>
+                    <div style="margin-top: 1rem; color: var(--text-secondary); font-size: 0.85rem;">
+                        <span>By {{ post.author }}</span> •
+                        <span>{{ post.published_at.strftime('%B %d, %Y') if post.published_at else post.created_at.strftime('%B %d, %Y') }}</span>
+                    </div>
+                    <a href="{{ url_for('blog_post', slug=post.slug) }}" class="cta-button" style="margin-top: 1rem; display: inline-block; padding: 0.6rem 1.5rem; font-size: 0.9rem;">
+                        Read More
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 4rem 2rem; color: var(--text-secondary);">
+                <h3 style="color: var(--text-primary); margin-bottom: 1rem;">No posts yet</h3>
+                <p>Check back soon for new content!</p>
+            </div>
+            {% endif %}
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Your Name. Built with Flask.</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

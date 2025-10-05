@@ -1,5 +1,6 @@
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import UserMixin
 
 db = SQLAlchemy()
 
@@ -46,4 +47,39 @@ class BlogPost(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'published_at': self.published_at.isoformat() if self.published_at else None,
+        }
+
+
+class User(UserMixin, db.Model):
+    """Model for authenticated users."""
+
+    __tablename__ = 'users'
+
+    id = db.Column(db.Integer, primary_key=True)
+    github_id = db.Column(db.String(100), unique=True, nullable=False)
+    username = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(200))
+    avatar_url = db.Column(db.String(500))
+
+    # User metadata
+    is_admin = db.Column(db.Boolean, default=False, nullable=False)
+
+    # Timestamps
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    last_login = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<User {self.username}>'
+
+    def to_dict(self):
+        """Convert user to dictionary for JSON serialization."""
+        return {
+            'id': self.id,
+            'github_id': self.github_id,
+            'username': self.username,
+            'email': self.email,
+            'avatar_url': self.avatar_url,
+            'is_admin': self.is_admin,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'last_login': self.last_login.isoformat() if self.last_login else None,
         }

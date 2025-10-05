@@ -13,6 +13,7 @@
         <div class="nav-container">
             <div class="logo">MyBlog</div>
             <ul class="nav-links">
+                <li><a href="{{ url_for('blog_list') }}">Blog</a></li>
                 <li><a href="#projects">Projects</a></li>
                 <li><a href="#architecture">System Architecture</a></li>
                 <li><a href="#playbooks">Playbooks</a></li>
@@ -24,7 +25,10 @@
     <section class="hero">
         <h1>Welcome to the Future</h1>
         <p>Exploring technology, architecture, and innovative solutions for tomorrow's challenges</p>
-        <a href="#projects" class="cta-button">Explore My Work</a>
+        <div style="display: flex; gap: 1rem; justify-content: center;">
+            <a href="{{ url_for('blog_list') }}" class="cta-button">Read the Blog</a>
+            <a href="#projects" class="cta-button" style="background: var(--secondary-bg); color: var(--text-primary);">Explore Projects</a>
+        </div>
     </section>
 
     <main>

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ post.title }} - Blog</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .post-content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .post-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .post-meta {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-top: 1rem;
+        }
+
+        .post-body {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: var(--text-primary);
+        }
+
+        .post-body p {
+            margin-bottom: 1.5rem;
+        }
+
+        .post-tags {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            background: var(--secondary-bg);
+            color: var(--accent-color);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-right: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+
+    <nav>
+        <div class="nav-container">
+            <div class="logo">MyBlog</div>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('index') }}">Home</a></li>
+                <li><a href="{{ url_for('blog_list') }}">Blog</a></li>
+                <li><a href="{{ url_for('admin_dashboard') }}">Admin</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div style="margin-top: 80px;"></div>
+
+    <main>
+        <article class="post-content">
+            <div class="post-header">
+                {% if post.category %}
+                <span class="card-tag">{{ post.category }}</span>
+                {% endif %}
+                <h1 style="font-size: 2.5rem; margin: 1rem 0;">{{ post.title }}</h1>
+                <div class="post-meta">
+                    <span>By {{ post.author }}</span> •
+                    <span>{{ post.published_at.strftime('%B %d, %Y') if post.published_at else post.created_at.strftime('%B %d, %Y') }}</span>
+                </div>
+            </div>
+
+            <div class="post-body">
+                {{ post.content | safe }}
+            </div>
+
+            {% if post.tags %}
+            <div class="post-tags">
+                {% for tag in post.tags.split(',') %}
+                <span class="tag">{{ tag.strip() }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div style="margin-top: 3rem; text-align: center;">
+                <a href="{{ url_for('blog_list') }}" class="cta-button">← Back to Blog</a>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Your Name. Built with Flask.</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

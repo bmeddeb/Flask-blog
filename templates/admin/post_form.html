@@ -1,0 +1,114 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+    <h1>{{ title }}</h1>
+    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+</div>
+
+<div class="card" style="max-width: 900px;">
+    <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+
+        <div class="form-group">
+            {{ form.title.label }}
+            {{ form.title(class="form-control") }}
+            {% if form.title.errors %}
+                <span style="color: #dc3545; font-size: 0.85rem;">{{ form.title.errors[0] }}</span>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            {{ form.slug.label }}
+            {{ form.slug(class="form-control") }}
+            {% if form.slug.errors %}
+                <span style="color: #dc3545; font-size: 0.85rem;">{{ form.slug.errors[0] }}</span>
+            {% endif %}
+            <small style="color: var(--text-secondary); font-size: 0.85rem;">
+                URL-friendly version of the title (e.g., my-blog-post)
+            </small>
+        </div>
+
+        <div class="form-group">
+            {{ form.excerpt.label }}
+            {{ form.excerpt(class="form-control") }}
+            {% if form.excerpt.errors %}
+                <span style="color: #dc3545; font-size: 0.85rem;">{{ form.excerpt.errors[0] }}</span>
+            {% endif %}
+            <small style="color: var(--text-secondary); font-size: 0.85rem;">
+                Brief summary shown in post listings
+            </small>
+        </div>
+
+        <div class="form-group">
+            {{ form.content.label }}
+            {{ form.content(class="form-control") }}
+            {% if form.content.errors %}
+                <span style="color: #dc3545; font-size: 0.85rem;">{{ form.content.errors[0] }}</span>
+            {% endif %}
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <div class="form-group">
+                {{ form.author.label }}
+                {{ form.author(class="form-control") }}
+                {% if form.author.errors %}
+                    <span style="color: #dc3545; font-size: 0.85rem;">{{ form.author.errors[0] }}</span>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.category.label }}
+                {{ form.category(class="form-control") }}
+                {% if form.category.errors %}
+                    <span style="color: #dc3545; font-size: 0.85rem;">{{ form.category.errors[0] }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-group">
+            {{ form.tags.label }}
+            {{ form.tags(class="form-control") }}
+            {% if form.tags.errors %}
+                <span style="color: #dc3545; font-size: 0.85rem;">{{ form.tags.errors[0] }}</span>
+            {% endif %}
+        </div>
+
+        <div style="display: flex; gap: 2rem; margin-bottom: 2rem;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="checkbox-label">
+                    {{ form.published() }}
+                    {{ form.published.label.text }}
+                </label>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="checkbox-label">
+                    {{ form.featured() }}
+                    {{ form.featured.label.text }}
+                </label>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem;">
+            <button type="submit" class="btn">
+                {% if post %}Update Post{% else %}Create Post{% endif %}
+            </button>
+            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+// Auto-generate slug from title
+document.querySelector('#title').addEventListener('input', function(e) {
+    const slug = e.target.value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    document.querySelector('#slug').value = slug;
+});
+</script>
+{% endblock %}
