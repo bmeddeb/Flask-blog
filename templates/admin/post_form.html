@@ -2,6 +2,21 @@
 
 {% block title %}{{ title }}{% endblock %}
 
+{% block head %}
+<!-- Toast UI Editor CSS -->
+<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css" />
+<style>
+    #editor {
+        margin-bottom: 1.5rem;
+    }
+    .toastui-editor-defaultUI {
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="admin-header">
     <h1>{{ title }}</h1>
@@ -44,7 +59,10 @@
 
         <div class="form-group">
             {{ form.content.label }}
-            {{ form.content(class="form-control") }}
+            <!-- Toast UI Editor Container -->
+            <div id="editor"></div>
+            <!-- Hidden field to store markdown content -->
+            {{ form.content(style="display: none;") }}
             {% if form.content.errors %}
                 <span style="color: #dc3545; font-size: 0.85rem;">{{ form.content.errors[0] }}</span>
             {% endif %}
@@ -101,7 +119,61 @@
     </form>
 </div>
 
+<!-- Toast UI Editor JS -->
+<script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+
 <script>
+// Initialize Toast UI Editor
+const { Editor } = toastui;
+
+const editor = new Editor({
+    el: document.querySelector('#editor'),
+    height: '600px',
+    initialEditType: 'markdown',
+    previewStyle: 'vertical',
+    initialValue: document.querySelector('#content').value || '',
+    hooks: {
+        addImageBlobHook: async (blob, callback) => {
+            // Handle image upload
+            const formData = new FormData();
+            formData.append('image', blob);
+
+            try {
+                const response = await fetch('{{ url_for("upload_image") }}', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    callback(data.url, 'Image');
+                } else {
+                    alert('Image upload failed');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                alert('Image upload failed');
+            }
+        }
+    },
+    toolbarItems: [
+        ['heading', 'bold', 'italic', 'strike'],
+        ['hr', 'quote'],
+        ['ul', 'ol', 'task', 'indent', 'outdent'],
+        ['table', 'image', 'link'],
+        ['code', 'codeblock'],
+        ['scrollSync'],
+    ]
+});
+
+// Sync editor content to hidden field on form submit
+document.querySelector('form').addEventListener('submit', function() {
+    document.querySelector('#content').value = editor.getMarkdown();
+});
+
 // Auto-generate slug from title
 document.querySelector('#title').addEventListener('input', function(e) {
     const slug = e.target.value

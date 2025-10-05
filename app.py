@@ -1,10 +1,23 @@
 import os
+import uuid
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
+from pathlib import Path
+from werkzeug.utils import secure_filename
+from flask import Flask, render_template, request, redirect, url_for, jsonify, flash, session, send_from_directory
 from flask_migrate import Migrate
-from models import db, BlogPost
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from authlib.integrations.flask_client import OAuth
+from dotenv import load_dotenv
+import markdown
+from markdown.extensions.codehilite import CodeHiliteExtension
+from markdown.extensions.fenced_code import FencedCodeExtension
+from markdown.extensions.tables import TableExtension
+from models import db, BlogPost, User
 from forms import BlogPostForm
 from config import config
+
+# Load environment variables
+load_dotenv()
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -17,10 +30,144 @@ app.config.from_object(config[env])
 db.init_app(app)
 migrate = Migrate(app, db)
 
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Please log in to access the admin panel.'
 
-# Create tables
+# Initialize OAuth
+oauth = OAuth(app)
+github = oauth.register(
+    name='github',
+    client_id=app.config['GITHUB_CLIENT_ID'],
+    client_secret=app.config['GITHUB_CLIENT_SECRET'],
+    authorize_url='https://github.com/login/oauth/authorize',
+    authorize_params=None,
+    access_token_url='https://github.com/login/oauth/access_token',
+    access_token_params=None,
+    refresh_token_url=None,
+    redirect_uri=app.config['GITHUB_CALLBACK_URL'],
+    client_kwargs={'scope': 'user:email'},
+)
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    """Load user by ID for Flask-Login."""
+    return User.query.get(int(user_id))
+
+
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
+def allowed_file(filename):
+    """Check if file extension is allowed."""
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
+
+def render_markdown(text):
+    """Convert markdown to HTML with syntax highlighting."""
+    md = markdown.Markdown(extensions=[
+        FencedCodeExtension(),
+        CodeHiliteExtension(css_class='highlight', linenums=False),
+        TableExtension(),
+        'nl2br',  # Convert newlines to <br>
+        'sane_lists',  # Better list handling
+    ])
+    return md.convert(text)
+
+
+# Create tables and upload folder
 with app.app_context():
     db.create_all()
+    app.config['UPLOAD_FOLDER'].mkdir(parents=True, exist_ok=True)
+
+
+# ============================================================================
+# AUTHENTICATION ROUTES
+# ============================================================================
+
+@app.route('/login')
+def login():
+    """Render login page."""
+    if current_user.is_authenticated:
+        return redirect(url_for('admin_dashboard'))
+    return render_template('login.html')
+
+
+@app.route('/auth/github')
+def github_login():
+    """Redirect to GitHub for OAuth authentication."""
+    redirect_uri = url_for('github_callback', _external=True)
+    return github.authorize_redirect(redirect_uri)
+
+
+@app.route('/auth/github/callback')
+def github_callback():
+    """Handle GitHub OAuth callback."""
+    try:
+        token = github.authorize_access_token()
+        resp = github.get('https://api.github.com/user', token=token)
+        profile = resp.json()
+
+        # Get user's email
+        email_resp = github.get('https://api.github.com/user/emails', token=token)
+        emails = email_resp.json()
+        primary_email = next((email['email'] for email in emails if email['primary']), None)
+
+        github_id = str(profile['id'])
+        username = profile['login']
+
+        # Find or create user
+        user = User.query.filter_by(github_id=github_id).first()
+
+        if not user:
+            # Create new user
+            user = User(
+                github_id=github_id,
+                username=username,
+                email=primary_email,
+                avatar_url=profile.get('avatar_url'),
+            )
+
+            # Check if user should be admin
+            if app.config['ADMIN_GITHUB_USERNAME'] and username == app.config['ADMIN_GITHUB_USERNAME']:
+                user.is_admin = True
+
+            db.session.add(user)
+            db.session.commit()
+            flash(f'Welcome {username}! Your account has been created.', 'success')
+        else:
+            # Update existing user
+            user.username = username
+            user.email = primary_email
+            user.avatar_url = profile.get('avatar_url')
+            user.last_login = datetime.utcnow()
+            db.session.commit()
+
+        # Log in user
+        login_user(user)
+        flash(f'Successfully logged in as {username}!', 'success')
+
+        # Redirect to next page or admin dashboard
+        next_page = request.args.get('next')
+        return redirect(next_page) if next_page else redirect(url_for('admin_dashboard'))
+
+    except Exception as e:
+        flash(f'Authentication failed: {str(e)}', 'error')
+        return redirect(url_for('login'))
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    """Log out the current user."""
+    logout_user()
+    flash('You have been logged out.', 'success')
+    return redirect(url_for('index'))
 
 
 # ============================================================================
@@ -44,7 +191,9 @@ def blog_list():
 def blog_post(slug):
     """Display a single blog post."""
     post = BlogPost.query.filter_by(slug=slug, published=True).first_or_404()
-    return render_template('blog_post.html', post=post)
+    # Render markdown to HTML
+    post_html = render_markdown(post.content)
+    return render_template('blog_post.html', post=post, post_html=post_html)
 
 
 # ============================================================================
@@ -52,6 +201,7 @@ def blog_post(slug):
 # ============================================================================
 
 @app.route('/admin')
+@login_required
 def admin_dashboard():
     """Admin dashboard showing all posts."""
     posts = BlogPost.query.order_by(BlogPost.created_at.desc()).all()
@@ -59,6 +209,7 @@ def admin_dashboard():
 
 
 @app.route('/admin/posts/new', methods=['GET', 'POST'])
+@login_required
 def admin_new_post():
     """Create a new blog post."""
     form = BlogPostForm()
@@ -92,6 +243,7 @@ def admin_new_post():
 
 
 @app.route('/admin/posts/<int:post_id>/edit', methods=['GET', 'POST'])
+@login_required
 def admin_edit_post(post_id):
     """Edit an existing blog post."""
     post = BlogPost.query.get_or_404(post_id)
@@ -124,6 +276,7 @@ def admin_edit_post(post_id):
 
 
 @app.route('/admin/posts/<int:post_id>/delete', methods=['POST'])
+@login_required
 def admin_delete_post(post_id):
     """Delete a blog post."""
     post = BlogPost.query.get_or_404(post_id)
@@ -132,6 +285,34 @@ def admin_delete_post(post_id):
 
     flash('Post deleted successfully!', 'success')
     return redirect(url_for('admin_dashboard'))
+
+
+@app.route('/admin/upload-image', methods=['POST'])
+@login_required
+def upload_image():
+    """Handle image uploads from Toast UI Editor."""
+    if 'image' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+
+    file = request.files['image']
+
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+
+    if file and allowed_file(file.filename):
+        # Generate unique filename
+        ext = file.filename.rsplit('.', 1)[1].lower()
+        filename = f"{uuid.uuid4().hex}.{ext}"
+
+        # Save file
+        filepath = app.config['UPLOAD_FOLDER'] / filename
+        file.save(filepath)
+
+        # Return URL for Toast UI Editor
+        url = url_for('static', filename=f'uploads/{filename}')
+        return jsonify({'url': url})
+
+    return jsonify({'error': 'Invalid file type'}), 400
 
 
 # ============================================================================

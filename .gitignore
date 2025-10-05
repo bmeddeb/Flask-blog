@@ -41,6 +41,10 @@ instance/
 *.swp
 *.swo
 *~
+Claude.md
+AGENTS.md
+.claude/
+
 
 # OS
 .DS_Store

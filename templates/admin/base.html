@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Admin{% endblock %} - Blog Admin</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head %}{% endblock %}
     <style>
         /* Admin-specific styles */
         .admin-container {
@@ -197,6 +198,15 @@
                 <li><a href="{{ url_for('index') }}">View Site</a></li>
                 <li><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
                 <li><a href="{{ url_for('admin_new_post') }}">New Post</a></li>
+                {% if current_user.is_authenticated %}
+                <li style="display: flex; align-items: center; gap: 0.5rem;">
+                    {% if current_user.avatar_url %}
+                    <img src="{{ current_user.avatar_url }}" alt="{{ current_user.username }}" style="width: 32px; height: 32px; border-radius: 50%;">
+                    {% endif %}
+                    <span style="color: var(--text-secondary);">{{ current_user.username }}</span>
+                </li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                {% endif %}
             </ul>
         </div>
     </nav>
