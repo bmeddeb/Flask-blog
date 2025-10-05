@@ -27,5 +27,8 @@ def process_image(image_path: Path, max_width: int, max_height: int, quality: in
     return img
 
 
-def unique_image_name() -> str:
-    return f"{uuid.uuid4().hex}.jpg"
+def unique_image_name(ext: str = "jpg") -> str:
+    return f"{uuid.uuid4().hex}.{ext.lower()}"
+
+def is_svg_filename(filename: str) -> bool:
+    return filename.lower().endswith('.svg')

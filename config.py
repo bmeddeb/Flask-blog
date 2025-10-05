@@ -41,6 +41,9 @@ class Config:
     IMAGE_THUMBNAIL_SIZE = (400, 400)  # Thumbnail size
     IMAGE_SOCIAL_SIZE = (1200, 630)  # Social media share size
 
+    # SVG sanitization (feature flag)
+    SVG_SANITIZATION_ENABLED = os.environ.get('SVG_SANITIZATION_ENABLED') == '1'
+
 
 class DevelopmentConfig(Config):
     """Development configuration."""

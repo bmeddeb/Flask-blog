@@ -15,7 +15,12 @@ from markupsafe import Markup
 
 from blog_app.extensions import db
 from blog_app.utils.markdown import render_markdown
-from blog_app.utils.images import allowed_file, process_image, unique_image_name
+from blog_app.utils.images import (
+    allowed_file,
+    process_image,
+    unique_image_name,
+    is_svg_filename,
+)
 from models import BlogPost, Page, Setting
 from forms import BlogPostForm, PageForm, SettingsForm
 
@@ -275,10 +280,26 @@ def upload_image():
         return jsonify({"error": "No file selected"}), 400
 
     allowed = current_app.config["ALLOWED_EXTENSIONS"]
+    # TODO(svg): When an SVG sanitizer is available, handle `.svg` here
+    # by sanitizing and saving as SVG. This stub explicitly blocks SVG
+    # uploads unless the feature flag is enabled and sanitizer provided.
     if file and allowed_file(file.filename, allowed):
-        filename = unique_image_name()
+        # Controlled SVG branch
+        if is_svg_filename(file.filename):
+            if not current_app.config.get("SVG_SANITIZATION_ENABLED", False):
+                return (
+                    jsonify({
+                        "error": "SVG sanitization disabled. Set SVG_SANITIZATION_ENABLED=1 and provide a sanitizer to accept SVGs."
+                    }),
+                    400,
+                )
+            return jsonify({"error": "SVG sanitization not implemented yet."}), 501
+
         upload_dir: Path = current_app.config["UPLOAD_FOLDER"]
         upload_dir.mkdir(parents=True, exist_ok=True)
+
+        # Save and process raster images as JPEG
+        filename = unique_image_name("jpg")
         filepath = upload_dir / filename
         file.save(filepath)
 
