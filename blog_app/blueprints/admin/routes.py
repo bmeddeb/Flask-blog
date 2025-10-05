@@ -15,6 +15,7 @@ from flask import (
 from flask_login import current_user, login_required
 from markupsafe import Markup
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy import or_
 
 from blog_app.extensions import db
 from blog_app.utils.database import safe_db_add, safe_db_commit
@@ -25,6 +26,7 @@ from blog_app.utils.images import (
     unique_image_name,
 )
 from blog_app.utils.markdown import render_markdown
+from blog_app.utils.slug import slugify, ensure_unique_slug
 from forms import BlogPostForm, CategoryForm, PageForm, SettingsForm, TagForm
 from models import BlogPost, Category, Page, Setting, Tag
 
@@ -36,8 +38,37 @@ bp = Blueprint("admin", __name__, url_prefix="/admin")
 @bp.route("/")
 @login_required
 def admin_dashboard():
-    posts = BlogPost.query.order_by(BlogPost.created_at.desc()).all()
-    return render_template("admin/dashboard.html", posts=posts)
+    # Filters and search
+    category_id = request.args.get('category', type=int)
+    tag_id = request.args.get('tag', type=int)
+    query_text = request.args.get('q', default='', type=str)
+    page = request.args.get('page', default=1, type=int)
+
+    q = BlogPost.query
+    if category_id:
+        q = q.filter(BlogPost.category_id == category_id)
+    if tag_id:
+        q = q.join(BlogPost.tag_items).filter(Tag.id == tag_id)
+    if query_text:
+        like = f"%{query_text}%"
+        q = q.filter(or_(BlogPost.title.ilike(like), BlogPost.excerpt.ilike(like), BlogPost.author.ilike(like)))
+
+    from flask import current_app
+    per_page = current_app.config.get('ADMIN_POSTS_PER_PAGE', 10)
+    pagination = db.paginate(q.order_by(BlogPost.created_at.desc()), page=page, per_page=per_page, error_out=False)
+
+    categories = Category.query.order_by(Category.name.asc()).all()
+    tags = Tag.query.order_by(Tag.name.asc()).all()
+    return render_template(
+        "admin/dashboard.html",
+        posts=pagination.items,
+        pagination=pagination,
+        categories=categories,
+        tags=tags,
+        selected_category=category_id,
+        selected_tag=tag_id,
+        search_query=query_text,
+    )
 
 
 @bp.route("/posts/new", methods=["GET", "POST"])
@@ -168,15 +199,25 @@ def admin_edit_post(post_id):
 def admin_categories():
     form = CategoryForm()
     if form.validate_on_submit():
-        # create new category
-        cat = Category(name=form.name.data.strip(), slug=(form.slug.data or '').strip() or None)
-        try:
-            success, error = safe_db_add(cat, 'Category created', 'Failed to create category')
-            if success:
-                return redirect(url_for('admin.admin_categories'))
-        except Exception as e:
-            logger.error(f"Error creating category: {str(e)}")
-            flash("Failed to create category. Please try again.", "error")
+        name = form.name.data.strip()
+        slug = (form.slug.data or '').strip()
+        # unique name
+        if Category.query.filter_by(name=name).first():
+            form.name.errors.append('Name already exists')
+        else:
+            if not slug:
+                slug = slugify(name)
+            slug = ensure_unique_slug(Category, slug)
+            cat = Category(name=name, slug=slug)
+            try:
+                success, error = safe_db_add(cat, 'Category created', 'Failed to create category')
+                if success:
+                    return redirect(url_for('admin.admin_categories'))
+                else:
+                    flash(error, 'error')
+            except Exception as e:
+                logger.error(f"Error creating category: {str(e)}")
+                flash("Failed to create category. Please try again.", "error")
     categories = Category.query.order_by(Category.name.asc()).all()
     return render_template('admin/categories.html', categories=categories, form=form)
 
@@ -187,18 +228,27 @@ def admin_edit_category(cat_id):
     cat = Category.query.get_or_404(cat_id)
     form = CategoryForm(obj=cat)
     if form.validate_on_submit():
-        cat.name = form.name.data.strip()
-        cat.slug = (form.slug.data or '').strip() or None
-        try:
-            success, error = safe_db_commit()
-            if success:
-                flash('Category updated', 'success')
-                return redirect(url_for('admin.admin_categories'))
-            else:
-                flash(error, 'error')
-        except Exception as e:
-            logger.error(f"Error updating category {cat_id}: {str(e)}")
-            flash("Failed to update category. Please try again.", "error")
+        name = form.name.data.strip()
+        slug = (form.slug.data or '').strip()
+        exists = Category.query.filter(Category.name == name, Category.id != cat.id).first()
+        if exists:
+            form.name.errors.append('Name already exists')
+        else:
+            if not slug:
+                slug = slugify(name)
+            slug = ensure_unique_slug(Category, slug, exclude_id=cat.id)
+            cat.name = name
+            cat.slug = slug
+            try:
+                success, error = safe_db_commit()
+                if success:
+                    flash('Category updated', 'success')
+                    return redirect(url_for('admin.admin_categories'))
+                else:
+                    flash(error, 'error')
+            except Exception as e:
+                logger.error(f"Error updating category {cat_id}: {str(e)}")
+                flash("Failed to update category. Please try again.", "error")
     return render_template('admin/category_form.html', form=form, category=cat, title='Edit Category')
 
 
@@ -227,13 +277,15 @@ def admin_delete_category(cat_id):
 def admin_tags():
     form = TagForm()
     if form.validate_on_submit():
-        tag_name = form.name.data.strip()
-        # Check if tag already exists
-        existing_tag = Tag.query.filter_by(name=tag_name).first()
-        if existing_tag:
-            flash(f'Tag "{tag_name}" already exists', 'error')
+        name = form.name.data.strip()
+        slug = (form.slug.data or '').strip()
+        if Tag.query.filter_by(name=name).first():
+            form.name.errors.append('Name already exists')
         else:
-            tag = Tag(name=tag_name, slug=(form.slug.data or '').strip() or None)
+            if not slug:
+                slug = slugify(name)
+            slug = ensure_unique_slug(Tag, slug)
+            tag = Tag(name=name, slug=slug)
             try:
                 success, error = safe_db_add(tag, 'Tag created', 'Failed to create tag')
                 if not success:
@@ -241,7 +293,9 @@ def admin_tags():
             except Exception as e:
                 logger.error(f"Error creating tag: {str(e)}")
                 flash("Failed to create tag. Please try again.", "error")
-        return redirect(url_for('admin.admin_tags'))
+        # after processing, render with potential errors
+        tags = Tag.query.order_by(Tag.name.asc()).all()
+        return render_template('admin/tags.html', tags=tags, form=form)
     tags = Tag.query.order_by(Tag.name.asc()).all()
     return render_template('admin/tags.html', tags=tags, form=form)
 
@@ -252,18 +306,28 @@ def admin_edit_tag(tag_id):
     tag = Tag.query.get_or_404(tag_id)
     form = TagForm(obj=tag)
     if form.validate_on_submit():
-        tag.name = form.name.data.strip()
-        tag.slug = (form.slug.data or '').strip() or None
-        try:
-            success, error = safe_db_commit()
-            if success:
-                flash('Tag updated', 'success')
-            else:
-                flash(error, 'error')
-        except Exception as e:
-            logger.error(f"Error updating tag {tag_id}: {str(e)}")
-            flash("Failed to update tag. Please try again.", "error")
-        return redirect(url_for('admin.admin_tags'))
+        name = form.name.data.strip()
+        slug = (form.slug.data or '').strip()
+        exists = Tag.query.filter(Tag.name == name, Tag.id != tag.id).first()
+        if exists:
+            form.name.errors.append('Name already exists')
+        else:
+            if not slug:
+                slug = slugify(name)
+            slug = ensure_unique_slug(Tag, slug, exclude_id=tag.id)
+            tag.name = name
+            tag.slug = slug
+            try:
+                success, error = safe_db_commit()
+                if success:
+                    flash('Tag updated', 'success')
+                    return redirect(url_for('admin.admin_tags'))
+                else:
+                    flash(error, 'error')
+            except Exception as e:
+                logger.error(f"Error updating tag {tag_id}: {str(e)}")
+                flash("Failed to update tag. Please try again.", "error")
+        # fallthrough render with errors
     return render_template('admin/tag_form.html', form=form, tag=tag, title='Edit Tag')
 
 

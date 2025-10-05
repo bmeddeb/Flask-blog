@@ -13,10 +13,12 @@
       <div class="form-group">
         {{ form.name.label }}
         {{ form.name(class='form-control', placeholder='e.g., Programming') }}
+        {% if form.name.errors %}<div class="form-error">{{ form.name.errors[0] }}</div>{% endif %}
       </div>
       <div class="form-group">
         {{ form.slug.label }}
         {{ form.slug(class='form-control', placeholder='optional-custom-slug') }}
+        {% if form.slug.errors %}<div class="form-error">{{ form.slug.errors[0] }}</div>{% endif %}
       </div>
       <button type="submit" class="btn">Create</button>
     </form>
@@ -47,4 +49,3 @@
   </div>
 </div>
 {% endblock %}
-

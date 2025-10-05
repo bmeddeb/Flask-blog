@@ -44,6 +44,9 @@ class Config:
     # SVG sanitization (feature flag)
     SVG_SANITIZATION_ENABLED = os.environ.get('SVG_SANITIZATION_ENABLED') == '1'
 
+    # Admin UI settings
+    ADMIN_POSTS_PER_PAGE = int(os.environ.get('ADMIN_POSTS_PER_PAGE', 10))
+
 
 class DevelopmentConfig(Config):
     """Development configuration."""

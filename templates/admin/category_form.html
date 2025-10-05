@@ -11,14 +11,15 @@
       <div class="form-group">
         {{ form.name.label }}
         {{ form.name(class='form-control') }}
+        {% if form.name.errors %}<div class="form-error">{{ form.name.errors[0] }}</div>{% endif %}
       </div>
       <div class="form-group">
         {{ form.slug.label }}
         {{ form.slug(class='form-control') }}
+        {% if form.slug.errors %}<div class="form-error">{{ form.slug.errors[0] }}</div>{% endif %}
       </div>
       {{ form.submit(class='btn') }}
     </form>
   </div>
 </div>
 {% endblock %}
-

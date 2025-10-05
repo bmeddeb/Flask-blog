@@ -8,6 +8,29 @@
     <a href="{{ url_for('admin.admin_new_post') }}" class="btn">+ New Post</a>
 </div>
 
+<form method="GET" style="margin: 1rem 0; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+    <label>Category</label>
+    <select name="category" class="form-control" style="min-width: 180px;">
+        <option value="">All</option>
+        {% for c in categories or [] %}
+        <option value="{{ c.id }}" {% if selected_category == c.id %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+    </select>
+    <label>Tag</label>
+    <select name="tag" class="form-control" style="min-width: 180px;">
+        <option value="">All</option>
+        {% for t in tags or [] %}
+        <option value="{{ t.id }}" {% if selected_tag == t.id %}selected{% endif %}>{{ t.name }}</option>
+        {% endfor %}
+    </select>
+    <label>Search</label>
+    <input type="text" name="q" class="form-control" placeholder="Title, excerpt, author" value="{{ search_query or '' }}" style="min-width: 240px;">
+    <button type="submit" class="btn">Filter</button>
+    {% if selected_category or selected_tag %}
+    <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary">Clear</a>
+    {% endif %}
+  </form>
+
 {% if posts %}
 <table class="posts-table">
     <thead>
@@ -66,6 +89,21 @@
         {% endfor %}
     </tbody>
 </table>
+{% if pagination and pagination.pages > 1 %}
+<div class="pagination" style="margin-top: 1rem; display: flex; gap: 0.5rem; align-items: center;">
+    {% if pagination.has_prev %}
+      <a class="btn btn-secondary" href="{{ url_for('admin.admin_dashboard', page=pagination.prev_num, category=selected_category, tag=selected_tag, q=search_query) }}">← Prev</a>
+    {% else %}
+      <span class="btn btn-secondary" style="opacity: .5; pointer-events: none;">← Prev</span>
+    {% endif %}
+    <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+    {% if pagination.has_next %}
+      <a class="btn btn-secondary" href="{{ url_for('admin.admin_dashboard', page=pagination.next_num, category=selected_category, tag=selected_tag, q=search_query) }}">Next →</a>
+    {% else %}
+      <span class="btn btn-secondary" style="opacity: .5; pointer-events: none;">Next →</span>
+    {% endif %}
+  </div>
+{% endif %}
 {% else %}
 <div class="empty-state">
     <h3>No posts yet</h3>
