@@ -158,12 +158,14 @@ const editor = new Editor({
                 if (response.ok) {
                     const data = await response.json();
                     callback(data.url, 'Image');
+                    showToast('Image uploaded successfully!', 'success', 2000);
                 } else {
-                    alert('Image upload failed');
+                    const data = await response.json();
+                    showToast(data.error || 'Image upload failed', 'error');
                 }
             } catch (error) {
                 console.error('Upload error:', error);
-                alert('Image upload failed');
+                showToast('Image upload failed: ' + error.message, 'error');
             }
         }
     },

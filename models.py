@@ -17,6 +17,10 @@ class BlogPost(db.Model):
     excerpt = db.Column(db.String(500))
     author = db.Column(db.String(100), nullable=False, default='Admin')
 
+    # Post ownership
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    user = db.relationship('User', backref=db.backref('posts', lazy=True))
+
     # Post metadata
     published = db.Column(db.Boolean, default=False, nullable=False)
     featured = db.Column(db.Boolean, default=False, nullable=False)
@@ -30,6 +34,12 @@ class BlogPost(db.Model):
 
     def __repr__(self):
         return f'<BlogPost {self.title}>'
+
+    def is_owned_by(self, user):
+        """Check if the post is owned by the given user."""
+        if not user or not user.is_authenticated:
+            return False
+        return self.user_id == user.id
 
     def to_dict(self):
         """Convert blog post to dictionary for JSON serialization."""

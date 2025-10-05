@@ -196,9 +196,36 @@
             </div>
             {% endif %}
 
+            {% if is_preview and current_user.is_authenticated and post.is_owned_by(current_user) %}
+            <!-- Preview Action Buttons -->
+            <div style="margin-top: 3rem; padding-top: 2rem; border-top: 2px solid var(--border-color);">
+                <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                    {% if not post.published %}
+                    <!-- Draft post actions -->
+                    <form method="POST" action="{{ url_for('admin_publish_post', post_id=post.id) }}" style="display: inline;">
+                        <button type="submit" class="cta-button" style="background: #28a745; margin: 0;">
+                            ✓ Publish Post
+                        </button>
+                    </form>
+                    {% endif %}
+                    <a href="{{ url_for('admin_edit_post', post_id=post.id) }}" class="cta-button" style="background: var(--text-secondary);">
+                        ✎ Edit Post
+                    </a>
+                    <a href="{{ url_for('admin_dashboard') }}" class="cta-button" style="background: var(--text-secondary);">
+                        ← Back to Dashboard
+                    </a>
+                </div>
+            </div>
+            {% elif not is_preview %}
             <div style="margin-top: 3rem; text-align: center;">
                 <a href="{{ url_for('blog_list') }}" class="cta-button">← Back to Blog</a>
             </div>
+            {% else %}
+            <!-- Preview mode but not owner - just show back button -->
+            <div style="margin-top: 3rem; text-align: center;">
+                <a href="{{ url_for('admin_dashboard') }}" class="cta-button">← Back to Dashboard</a>
+            </div>
+            {% endif %}
         </article>
     </main>
 

@@ -260,6 +260,7 @@ def admin_new_post():
             tags=form.tags.data,
             published=form.published.data,
             featured=form.featured.data,
+            user_id=current_user.id,  # Assign current user as owner
         )
 
         if form.published.data:
@@ -326,6 +327,26 @@ def admin_preview_post(post_id):
     # Render markdown to HTML
     post_html = render_markdown(post.content)
     return render_template('blog_post.html', post=post, post_html=post_html, is_preview=True)
+
+
+@app.route('/admin/posts/<int:post_id>/publish', methods=['POST'])
+@login_required
+def admin_publish_post(post_id):
+    """Publish a draft post."""
+    post = BlogPost.query.get_or_404(post_id)
+
+    # Check ownership
+    if not post.is_owned_by(current_user):
+        flash('You do not have permission to publish this post.', 'error')
+        return redirect(url_for('admin_dashboard'))
+
+    # Publish the post
+    post.published = True
+    post.published_at = datetime.utcnow()
+    db.session.commit()
+
+    flash(Markup(f'Post published successfully! <a href="{url_for("blog_post", slug=post.slug)}" target="_blank" style="color: #155724; text-decoration: underline; font-weight: 600;">View Post →</a>'), 'success')
+    return redirect(url_for('blog_post', slug=post.slug))
 
 
 @app.route('/admin/posts/<int:post_id>/delete', methods=['POST'])
