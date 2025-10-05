@@ -81,3 +81,61 @@ class SettingsForm(FlaskForm):
         validators=[DataRequired(), NumberRange(min=1, max=100)],
         render_kw={'placeholder': '85'}
     )
+
+
+class PageForm(FlaskForm):
+    """Form for creating and editing pages."""
+
+    title = StringField(
+        'Page Title',
+        validators=[DataRequired(), Length(max=200)],
+        render_kw={'placeholder': 'Enter page title'}
+    )
+
+    slug = StringField(
+        'URL Slug',
+        validators=[DataRequired(), Length(max=200)],
+        render_kw={'placeholder': 'url-friendly-slug'}
+    )
+
+    layout = SelectField(
+        'Page Layout',
+        choices=[
+            ('full-width', 'Full Width - No sidebar'),
+            ('sidebar-left', 'Sidebar Left - Content on right'),
+            ('sidebar-right', 'Sidebar Right - Content on left'),
+            ('blank', 'Blank - Full HTML (no base template)'),
+        ],
+        validators=[DataRequired()]
+    )
+
+    content_type = SelectField(
+        'Content Type',
+        choices=[
+            ('markdown', 'Markdown'),
+            ('html', 'HTML'),
+        ],
+        validators=[DataRequired()]
+    )
+
+    content = TextAreaField(
+        'Page Content',
+        validators=[DataRequired()],
+        render_kw={'placeholder': 'Write your page content here...', 'rows': 15}
+    )
+
+    sidebar_content = TextAreaField(
+        'Sidebar Content',
+        validators=[Optional()],
+        render_kw={'placeholder': 'Sidebar content (for sidebar layouts only)', 'rows': 10}
+    )
+
+    published = BooleanField('Published')
+
+    show_in_nav = BooleanField('Show in Navigation Menu')
+
+    nav_order = IntegerField(
+        'Navigation Order',
+        validators=[Optional(), NumberRange(min=0)],
+        render_kw={'placeholder': '0'}
+    )

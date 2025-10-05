@@ -1,0 +1,272 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block head %}
+<!-- Toast UI Editor CSS -->
+<link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css" />
+<style>
+    #editor, #sidebarEditor {
+        margin-bottom: 1rem;
+    }
+    .toastui-editor-defaultUI {
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+    }
+    .page-form-container .form-group {
+        margin-bottom: 1rem;
+    }
+    #sidebarEditorContainer {
+        display: none;
+    }
+    #sidebarEditorContainer.show {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+    <h1>{{ title }}</h1>
+    <a href="{{ url_for('admin_pages') }}" class="btn btn-secondary">← Back to Pages</a>
+</div>
+
+<div class="card page-form-container" style="max-width: 1100px;">
+    <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+
+        <div class="form-group">
+            {{ form.title.label }}
+            {{ form.title(class="form-control") }}
+            {% if form.title.errors %}
+                <span style="color: #dc3545; font-size: 0.85rem;">{{ form.title.errors[0] }}</span>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            {{ form.slug.label }}
+            {{ form.slug(class="form-control") }}
+            {% if form.slug.errors %}
+                <span style="color: #dc3545; font-size: 0.85rem;">{{ form.slug.errors[0] }}</span>
+            {% endif %}
+            <small style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.25rem; display: block;">
+                URL: /page/{{ form.slug.data or 'your-slug-here' }}
+            </small>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                {{ form.layout.label }}
+                {{ form.layout(class="form-control", id="layoutSelect") }}
+                {% if form.layout.errors %}
+                    <span style="color: #dc3545; font-size: 0.85rem;">{{ form.layout.errors[0] }}</span>
+                {% endif %}
+                <small style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.25rem; display: block;">
+                    Choose how the page will be displayed
+                </small>
+            </div>
+
+            <div class="form-group">
+                {{ form.content_type.label }}
+                {{ form.content_type(class="form-control", id="contentTypeSelect") }}
+                {% if form.content_type.errors %}
+                    <span style="color: #dc3545; font-size: 0.85rem;">{{ form.content_type.errors[0] }}</span>
+                {% endif %}
+                <small style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.25rem; display: block;">
+                    Markdown uses editor, HTML is raw
+                </small>
+            </div>
+        </div>
+
+        <div class="form-group">
+            {{ form.content.label }}
+            <div id="editorContainer">
+                <!-- Toast UI Editor Container -->
+                <div id="editor"></div>
+                <!-- Hidden field to store markdown content -->
+                {{ form.content(style="display: none;") }}
+            </div>
+            <div id="htmlContainer" style="display: none;">
+                {{ form.content(class="form-control", rows="20", id="htmlContent") }}
+            </div>
+            {% if form.content.errors %}
+                <span style="color: #dc3545; font-size: 0.85rem;">{{ form.content.errors[0] }}</span>
+            {% endif %}
+        </div>
+
+        <div class="form-group" id="sidebarEditorContainer">
+            {{ form.sidebar_content.label }}
+            <div id="markdownSidebarContainer">
+                <div id="sidebarEditor"></div>
+                {{ form.sidebar_content(style="display: none;", id="sidebarMarkdown") }}
+            </div>
+            <div id="htmlSidebarContainer" style="display: none;">
+                {{ form.sidebar_content(class="form-control", rows="10", id="htmlSidebar") }}
+            </div>
+            <small style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.25rem; display: block;">
+                Content to display in the sidebar (only for sidebar layouts)
+            </small>
+        </div>
+
+        <div style="display: flex; gap: 2rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="checkbox-label">
+                    {{ form.published() }}
+                    {{ form.published.label.text }}
+                </label>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="checkbox-label">
+                    {{ form.show_in_nav() }}
+                    {{ form.show_in_nav.label.text }}
+                </label>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+                {{ form.nav_order.label }}
+                {{ form.nav_order(class="form-control", style="width: 100px;") }}
+                <small style="color: var(--text-secondary); font-size: 0.85rem;">Lower = first</small>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem;">
+            <button type="submit" class="btn">
+                {% if page %}Update Page{% else %}Create Page{% endif %}
+            </button>
+            <a href="{{ url_for('admin_pages') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<!-- Toast UI Editor JS -->
+<script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+
+<script>
+// Initialize Toast UI Editor for main content
+const { Editor } = toastui;
+
+let editor, sidebarEditor;
+
+function initEditors() {
+    const contentType = document.getElementById('contentTypeSelect').value;
+
+    if (contentType === 'markdown') {
+        // Show markdown editor
+        document.getElementById('editorContainer').style.display = 'block';
+        document.getElementById('htmlContainer').style.display = 'none';
+        document.getElementById('markdownSidebarContainer').style.display = 'block';
+        document.getElementById('htmlSidebarContainer').style.display = 'none';
+
+        if (!editor) {
+            editor = new Editor({
+                el: document.querySelector('#editor'),
+                height: '600px',
+                initialEditType: 'markdown',
+                previewStyle: 'vertical',
+                initialValue: document.querySelector('#content').value || '',
+                hooks: {
+                    addImageBlobHook: async (blob, callback) => {
+                        const formData = new FormData();
+                        formData.append('image', blob);
+
+                        try {
+                            const response = await fetch('{{ url_for("upload_image") }}', {
+                                method: 'POST',
+                                body: formData,
+                                headers: {
+                                    'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+                                }
+                            });
+
+                            if (response.ok) {
+                                const data = await response.json();
+                                callback(data.url, 'Image');
+                                showToast('Image uploaded successfully!', 'success', 2000);
+                            } else {
+                                const data = await response.json();
+                                showToast(data.error || 'Image upload failed', 'error');
+                            }
+                        } catch (error) {
+                            console.error('Upload error:', error);
+                            showToast('Image upload failed: ' + error.message, 'error');
+                        }
+                    }
+                },
+                toolbarItems: [
+                    ['heading', 'bold', 'italic', 'strike'],
+                    ['hr', 'quote'],
+                    ['ul', 'ol', 'task', 'indent', 'outdent'],
+                    ['table', 'image', 'link'],
+                    ['code', 'codeblock'],
+                    ['scrollSync'],
+                ]
+            });
+        }
+
+        if (!sidebarEditor) {
+            sidebarEditor = new Editor({
+                el: document.querySelector('#sidebarEditor'),
+                height: '400px',
+                initialEditType: 'markdown',
+                previewStyle: 'vertical',
+                initialValue: document.querySelector('#sidebarMarkdown').value || '',
+            });
+        }
+    } else {
+        // Show HTML textarea
+        document.getElementById('editorContainer').style.display = 'none';
+        document.getElementById('htmlContainer').style.display = 'block';
+        document.getElementById('markdownSidebarContainer').style.display = 'none';
+        document.getElementById('htmlSidebarContainer').style.display = 'block';
+    }
+}
+
+// Show/hide sidebar editor based on layout
+function updateSidebarVisibility() {
+    const layout = document.getElementById('layoutSelect').value;
+    const container = document.getElementById('sidebarEditorContainer');
+
+    if (layout === 'sidebar-left' || layout === 'sidebar-right') {
+        container.classList.add('show');
+    } else {
+        container.classList.remove('show');
+    }
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', function() {
+    initEditors();
+    updateSidebarVisibility();
+});
+
+// Update on content type change
+document.getElementById('contentTypeSelect').addEventListener('change', initEditors);
+
+// Update on layout change
+document.getElementById('layoutSelect').addEventListener('change', updateSidebarVisibility);
+
+// Sync editor content to hidden field on form submit
+document.querySelector('form').addEventListener('submit', function() {
+    const contentType = document.getElementById('contentTypeSelect').value;
+
+    if (contentType === 'markdown') {
+        if (editor) {
+            document.querySelector('#content').value = editor.getMarkdown();
+        }
+        if (sidebarEditor) {
+            document.querySelector('#sidebarMarkdown').value = sidebarEditor.getMarkdown();
+        }
+    }
+});
+
+// Auto-generate slug from title
+document.querySelector('#title').addEventListener('input', function(e) {
+    const slug = e.target.value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    document.querySelector('#slug').value = slug;
+});
+</script>
+{% endblock %}

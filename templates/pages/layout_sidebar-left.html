@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page.title }} - Blog</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pygments-css@1.0.0/github.min.css">
+    <style>
+        .page-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 3rem;
+        }
+
+        .page-sidebar {
+            padding: 1.5rem;
+            background: var(--accent-bg);
+            border-radius: 12px;
+            height: fit-content;
+            position: sticky;
+            top: 100px;
+        }
+
+        .page-sidebar h3 {
+            margin-top: 0;
+            color: var(--accent-color);
+        }
+
+        .page-content {
+            min-width: 0;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .page-body, .sidebar-body {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: var(--text-primary);
+        }
+
+        .sidebar-body {
+            font-size: 0.95rem;
+        }
+
+        /* Shared styles for both content and sidebar */
+        .page-body p, .sidebar-body p { margin-bottom: 1.5rem; }
+        .page-body pre, .sidebar-body pre {
+            background: #f6f8fa;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 1rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+        .page-body code, .sidebar-body code {
+            background: #f6f8fa;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        .page-body pre code, .sidebar-body pre code { background: none; padding: 0; }
+        .page-body h2, .page-body h3, .sidebar-body h2, .sidebar-body h3 {
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+        .page-body h2 {
+            font-size: 1.8rem;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        .page-body h3, .sidebar-body h3 { font-size: 1.3rem; }
+        .page-body ul, .page-body ol, .sidebar-body ul, .sidebar-body ol { margin: 1rem 0 1.5rem 2rem; }
+        .page-body li, .sidebar-body li { margin-bottom: 0.5rem; }
+        .page-body a, .sidebar-body a {
+            color: var(--accent-color);
+            text-decoration: underline;
+        }
+        .page-body a:hover, .sidebar-body a:hover { color: var(--hover-color); }
+
+        /* Constrain images to their containers */
+        .page-body img, .sidebar-body img {
+            max-width: 100%;
+            width: auto;
+            height: auto;
+            display: block;
+            border-radius: 8px;
+            margin: 1rem auto;
+        }
+
+        /* Ensure images in any nested containers are also constrained */
+        .page-body * img, .sidebar-body * img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        @media (max-width: 968px) {
+            .page-container {
+                grid-template-columns: 1fr;
+            }
+            .page-sidebar {
+                position: static;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+
+    <nav>
+        <div class="nav-container">
+            <div class="logo">MyBlog</div>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('index') }}">Home</a></li>
+                <li><a href="{{ url_for('blog_list') }}">Blog</a></li>
+                {% for nav_page in get_nav_pages() %}
+                <li><a href="{{ url_for('view_page', slug=nav_page.slug) }}">{{ nav_page.title }}</a></li>
+                {% endfor %}
+                <li><a href="{{ url_for('admin_dashboard') }}">Admin</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div style="margin-top: 80px;"></div>
+
+    <main>
+        <div class="page-container">
+            <!-- Sidebar on left -->
+            <aside class="page-sidebar">
+                <div class="sidebar-body">
+                    {{ sidebar_html | safe }}
+                </div>
+            </aside>
+
+            <!-- Content on right -->
+            <article class="page-content">
+                <div class="page-header">
+                    <h1 style="font-size: 2.5rem; margin: 0;">{{ page.title }}</h1>
+                </div>
+
+                <div class="page-body">
+                    {{ content_html | safe }}
+                </div>
+            </article>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Your Name. Built with Flask.</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

@@ -130,3 +130,62 @@ class Setting(db.Model):
             db.session.add(setting)
         db.session.commit()
         return setting
+
+
+class Page(db.Model):
+    """Model for static pages with customizable layouts."""
+
+    __tablename__ = 'pages'
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    slug = db.Column(db.String(200), unique=True, nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    sidebar_content = db.Column(db.Text)  # Content for sidebar layouts
+
+    # Layout options: 'full-width', 'sidebar-left', 'sidebar-right', 'blank'
+    layout = db.Column(db.String(50), nullable=False, default='full-width')
+
+    # Content type: 'markdown' or 'html'
+    content_type = db.Column(db.String(20), nullable=False, default='markdown')
+
+    # Page ownership
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    user = db.relationship('User', backref=db.backref('pages', lazy=True))
+
+    # Page metadata
+    published = db.Column(db.Boolean, default=False, nullable=False)
+    show_in_nav = db.Column(db.Boolean, default=False, nullable=False)  # Show in navigation menu
+    nav_order = db.Column(db.Integer, default=0)  # Order in navigation
+
+    # Timestamps
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    published_at = db.Column(db.DateTime)
+
+    def __repr__(self):
+        return f'<Page {self.title}>'
+
+    def is_owned_by(self, user):
+        """Check if the page is owned by the given user."""
+        if not user or not user.is_authenticated:
+            return False
+        return self.user_id == user.id
+
+    def to_dict(self):
+        """Convert page to dictionary for JSON serialization."""
+        return {
+            'id': self.id,
+            'title': self.title,
+            'slug': self.slug,
+            'content': self.content,
+            'sidebar_content': self.sidebar_content,
+            'layout': self.layout,
+            'content_type': self.content_type,
+            'published': self.published,
+            'show_in_nav': self.show_in_nav,
+            'nav_order': self.nav_order,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'published_at': self.published_at.isoformat() if self.published_at else None,
+        }

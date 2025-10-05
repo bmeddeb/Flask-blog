@@ -14,8 +14,8 @@ import markdown
 from markdown.extensions.codehilite import CodeHiliteExtension
 from markdown.extensions.fenced_code import FencedCodeExtension
 from markdown.extensions.tables import TableExtension
-from models import db, BlogPost, User, Setting
-from forms import BlogPostForm, SettingsForm
+from models import db, BlogPost, User, Setting, Page
+from forms import BlogPostForm, SettingsForm, PageForm
 from config import config
 
 # Load environment variables
@@ -119,6 +119,15 @@ def process_image(image_path, max_width=None, max_height=None, quality=None):
 with app.app_context():
     db.create_all()
     app.config['UPLOAD_FOLDER'].mkdir(parents=True, exist_ok=True)
+
+
+# Context processor to provide navigation pages to all templates
+@app.context_processor
+def inject_nav_pages():
+    """Make navigation pages available to all templates."""
+    def get_nav_pages():
+        return Page.query.filter_by(published=True, show_in_nav=True).order_by(Page.nav_order).all()
+    return dict(get_nav_pages=get_nav_pages)
 
 
 # ============================================================================
@@ -382,6 +391,120 @@ def admin_settings():
     form.image_quality.data = int(Setting.get('image_quality', app.config['IMAGE_QUALITY']))
 
     return render_template('admin/settings.html', form=form)
+
+
+# ============================================================================
+# PAGE ROUTES
+# ============================================================================
+
+@app.route('/admin/pages')
+@login_required
+def admin_pages():
+    """List all pages."""
+    pages = Page.query.order_by(Page.created_at.desc()).all()
+    return render_template('admin/pages.html', pages=pages)
+
+
+@app.route('/admin/pages/new', methods=['GET', 'POST'])
+@login_required
+def admin_new_page():
+    """Create a new page."""
+    form = PageForm()
+
+    if form.validate_on_submit():
+        page = Page(
+            title=form.title.data,
+            slug=form.slug.data,
+            content=form.content.data,
+            sidebar_content=form.sidebar_content.data,
+            layout=form.layout.data,
+            content_type=form.content_type.data,
+            published=form.published.data,
+            show_in_nav=form.show_in_nav.data,
+            nav_order=form.nav_order.data or 0,
+            user_id=current_user.id,
+        )
+
+        if form.published.data:
+            page.published_at = datetime.utcnow()
+
+        db.session.add(page)
+        db.session.commit()
+
+        flash('Page created successfully!', 'success')
+        return redirect(url_for('admin_pages'))
+
+    return render_template('admin/page_form.html', form=form, title='New Page')
+
+
+@app.route('/admin/pages/<int:page_id>/edit', methods=['GET', 'POST'])
+@login_required
+def admin_edit_page(page_id):
+    """Edit an existing page."""
+    page = Page.query.get_or_404(page_id)
+    form = PageForm(obj=page)
+
+    if form.validate_on_submit():
+        page.title = form.title.data
+        page.slug = form.slug.data
+        page.content = form.content.data
+        page.sidebar_content = form.sidebar_content.data
+        page.layout = form.layout.data
+        page.content_type = form.content_type.data
+        page.show_in_nav = form.show_in_nav.data
+        page.nav_order = form.nav_order.data or 0
+
+        # Handle publishing
+        was_published = page.published
+        page.published = form.published.data
+
+        if form.published.data and not was_published:
+            page.published_at = datetime.utcnow()
+
+        db.session.commit()
+
+        flash('Page updated successfully!', 'success')
+        return redirect(url_for('admin_pages'))
+
+    return render_template('admin/page_form.html', form=form, title='Edit Page', page=page)
+
+
+@app.route('/admin/pages/<int:page_id>/delete', methods=['POST'])
+@login_required
+def admin_delete_page(page_id):
+    """Delete a page."""
+    page = Page.query.get_or_404(page_id)
+    db.session.delete(page)
+    db.session.commit()
+
+    flash('Page deleted successfully!', 'success')
+    return redirect(url_for('admin_pages'))
+
+
+@app.route('/page/<slug>')
+def view_page(slug):
+    """View a published page."""
+    page = Page.query.filter_by(slug=slug, published=True).first_or_404()
+
+    # Render content based on content type
+    if page.content_type == 'markdown':
+        content_html = render_markdown(page.content)
+        sidebar_html = render_markdown(page.sidebar_content) if page.sidebar_content else None
+    else:  # HTML
+        content_html = page.content
+        sidebar_html = page.sidebar_content
+
+    # For blank layout, render content directly without base template
+    if page.layout == 'blank':
+        return content_html
+
+    # Otherwise render with appropriate layout template
+    return render_template(
+        f'pages/layout_{page.layout}.html',
+        page=page,
+        content_html=content_html,
+        sidebar_html=sidebar_html
+    )
 
 
 @app.route('/admin/upload-image', methods=['POST'])

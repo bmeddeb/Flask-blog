@@ -325,8 +325,8 @@
             <div class="logo">Blog Admin</div>
             <ul class="nav-links">
                 <li><a href="{{ url_for('index') }}">View Site</a></li>
-                <li><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
-                <li><a href="{{ url_for('admin_new_post') }}">New Post</a></li>
+                <li><a href="{{ url_for('admin_dashboard') }}">Posts</a></li>
+                <li><a href="{{ url_for('admin_pages') }}">Pages</a></li>
                 <li><a href="{{ url_for('admin_settings') }}">Settings</a></li>
                 {% if current_user.is_authenticated %}
                 <li style="display: flex; align-items: center; gap: 0.5rem;">
