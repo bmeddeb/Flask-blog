@@ -28,7 +28,7 @@
 {% block content %}
 <div class="admin-header">
     <h1>{{ title }}</h1>
-    <a href="{{ url_for('admin_pages') }}" class="btn btn-secondary">← Back to Pages</a>
+    <a href="{{ url_for('admin.admin_pages') }}" class="btn btn-secondary">← Back to Pages</a>
 </div>
 
 <div class="card page-form-container" style="max-width: 1100px;">
@@ -134,7 +134,7 @@
             <button type="submit" class="btn">
                 {% if page %}Update Page{% else %}Create Page{% endif %}
             </button>
-            <a href="{{ url_for('admin_pages') }}" class="btn btn-secondary">Cancel</a>
+            <a href="{{ url_for('admin.admin_pages') }}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>

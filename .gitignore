@@ -45,7 +45,7 @@ migrations/
 Claude.md
 AGENTS.md
 .claude/
-
+docs/
 
 # OS
 .DS_Store

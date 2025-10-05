@@ -7,57 +7,57 @@ class BlogPostForm(FlaskForm):
     """Form for creating and editing blog posts."""
 
     title = StringField(
-        'Title',
+        "Title",
         validators=[DataRequired(), Length(max=200)],
-        render_kw={'placeholder': 'Enter post title'}
+        render_kw={"placeholder": "Enter post title"},
     )
 
     slug = StringField(
-        'Slug',
+        "Slug",
         validators=[DataRequired(), Length(max=200)],
-        render_kw={'placeholder': 'url-friendly-slug'}
+        render_kw={"placeholder": "url-friendly-slug"},
     )
 
     excerpt = TextAreaField(
-        'Excerpt',
+        "Excerpt",
         validators=[Optional(), Length(max=500)],
-        render_kw={'placeholder': 'Short summary of the post', 'rows': 3}
+        render_kw={"placeholder": "Short summary of the post", "rows": 3},
     )
 
     content = TextAreaField(
-        'Content',
+        "Content",
         validators=[DataRequired()],
-        render_kw={'placeholder': 'Write your post content here...', 'rows': 15}
+        render_kw={"placeholder": "Write your post content here...", "rows": 15},
     )
 
     author = StringField(
-        'Author',
+        "Author",
         validators=[DataRequired(), Length(max=100)],
-        render_kw={'placeholder': 'Author name'}
+        render_kw={"placeholder": "Author name"},
     )
 
     category = SelectField(
-        'Category',
+        "Category",
         choices=[
-            ('', 'Select category'),
-            ('technology', 'Technology'),
-            ('programming', 'Programming'),
-            ('tutorial', 'Tutorial'),
-            ('news', 'News'),
-            ('personal', 'Personal'),
+            ("", "Select category"),
+            ("technology", "Technology"),
+            ("programming", "Programming"),
+            ("tutorial", "Tutorial"),
+            ("news", "News"),
+            ("personal", "Personal"),
         ],
-        validators=[Optional()]
+        validators=[Optional()],
     )
 
     tags = StringField(
-        'Tags',
+        "Tags",
         validators=[Optional(), Length(max=200)],
-        render_kw={'placeholder': 'Comma-separated tags (e.g., python, flask, web)'}
+        render_kw={"placeholder": "Comma-separated tags (e.g., python, flask, web)"},
     )
 
-    published = BooleanField('Published')
+    published = BooleanField("Published")
 
-    featured = BooleanField('Featured')
+    featured = BooleanField("Featured")
 
 
 class SettingsForm(FlaskForm):
@@ -65,21 +65,21 @@ class SettingsForm(FlaskForm):
 
     # Image processing settings
     image_max_width = IntegerField(
-        'Maximum Image Width',
+        "Maximum Image Width",
         validators=[DataRequired(), NumberRange(min=100, max=4000)],
-        render_kw={'placeholder': '1920'}
+        render_kw={"placeholder": "1920"},
     )
 
     image_max_height = IntegerField(
-        'Maximum Image Height',
+        "Maximum Image Height",
         validators=[DataRequired(), NumberRange(min=100, max=4000)],
-        render_kw={'placeholder': '1920'}
+        render_kw={"placeholder": "1920"},
     )
 
     image_quality = IntegerField(
-        'JPEG Quality',
+        "JPEG Quality",
         validators=[DataRequired(), NumberRange(min=1, max=100)],
-        render_kw={'placeholder': '85'}
+        render_kw={"placeholder": "85"},
     )
 
 
@@ -87,55 +87,55 @@ class PageForm(FlaskForm):
     """Form for creating and editing pages."""
 
     title = StringField(
-        'Page Title',
+        "Page Title",
         validators=[DataRequired(), Length(max=200)],
-        render_kw={'placeholder': 'Enter page title'}
+        render_kw={"placeholder": "Enter page title"},
     )
 
     slug = StringField(
-        'URL Slug',
+        "URL Slug",
         validators=[DataRequired(), Length(max=200)],
-        render_kw={'placeholder': 'url-friendly-slug'}
+        render_kw={"placeholder": "url-friendly-slug"},
     )
 
     layout = SelectField(
-        'Page Layout',
+        "Page Layout",
         choices=[
-            ('full-width', 'Full Width - No sidebar'),
-            ('sidebar-left', 'Sidebar Left - Content on right'),
-            ('sidebar-right', 'Sidebar Right - Content on left'),
-            ('blank', 'Blank - Full HTML (no base template)'),
+            ("full-width", "Full Width - No sidebar"),
+            ("sidebar-left", "Sidebar Left - Content on right"),
+            ("sidebar-right", "Sidebar Right - Content on left"),
+            ("blank", "Blank - Full HTML (no base template)"),
         ],
-        validators=[DataRequired()]
+        validators=[DataRequired()],
     )
 
     content_type = SelectField(
-        'Content Type',
+        "Content Type",
         choices=[
-            ('markdown', 'Markdown'),
-            ('html', 'HTML'),
+            ("markdown", "Markdown"),
+            ("html", "HTML"),
         ],
-        validators=[DataRequired()]
+        validators=[DataRequired()],
     )
 
     content = TextAreaField(
-        'Page Content',
+        "Page Content",
         validators=[DataRequired()],
-        render_kw={'placeholder': 'Write your page content here...', 'rows': 15}
+        render_kw={"placeholder": "Write your page content here...", "rows": 15},
     )
 
     sidebar_content = TextAreaField(
-        'Sidebar Content',
+        "Sidebar Content",
         validators=[Optional()],
-        render_kw={'placeholder': 'Sidebar content (for sidebar layouts only)', 'rows': 10}
+        render_kw={"placeholder": "Sidebar content (for sidebar layouts only)", "rows": 10},
     )
 
-    published = BooleanField('Published')
+    published = BooleanField("Published")
 
-    show_in_nav = BooleanField('Show in Navigation Menu')
+    show_in_nav = BooleanField("Show in Navigation Menu")
 
     nav_order = IntegerField(
-        'Navigation Order',
+        "Navigation Order",
         validators=[Optional(), NumberRange(min=0)],
-        render_kw={'placeholder': '0'}
+        render_kw={"placeholder": "0"},
     )

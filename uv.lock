@@ -88,6 +88,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "authlib" },
+    { name = "black" },
     { name = "flask" },
     { name = "flask-login" },
     { name = "flask-migrate" },
@@ -111,6 +112,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "authlib", specifier = ">=1.3.0" },
+    { name = "black", specifier = ">=25.9.0" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=23.0.0" },
     { name = "flask", specifier = ">=3.0.0" },
     { name = "flask-login", specifier = ">=0.6.3" },

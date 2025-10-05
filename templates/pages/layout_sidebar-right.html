@@ -121,9 +121,9 @@
         <div class="nav-container">
             <div class="logo">MyBlog</div>
             <ul class="nav-links">
-                <li><a href="{{ url_for('index') }}">Home</a></li>
-                <li><a href="{{ url_for('blog_list') }}">Blog</a></li>
-                <li><a href="{{ url_for('admin_dashboard') }}">Admin</a></li>
+                <li><a href="{{ url_for('public.index') }}">Home</a></li>
+                <li><a href="{{ url_for('public.blog_list') }}">Blog</a></li>
+                <li><a href="{{ url_for('admin.admin_dashboard') }}">Admin</a></li>
             </ul>
         </div>
     </nav>
@@ -154,16 +154,16 @@
                     <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
                         {% if not page.published %}
                         <!-- Draft page actions -->
-                        <form method="POST" action="{{ url_for('admin_publish_page', page_id=page.id) }}" style="display: inline;">
+                        <form method="POST" action="{{ url_for('admin.admin_publish_page', page_id=page.id) }}" style="display: inline;">
                             <button type="submit" class="cta-button" style="background: #28a745; margin: 0;">
                                 ✓ Publish Page
                             </button>
                         </form>
                         {% endif %}
-                        <a href="{{ url_for('admin_edit_page', page_id=page.id) }}" class="cta-button" style="background: var(--text-secondary);">
+                        <a href="{{ url_for('admin.admin_edit_page', page_id=page.id) }}" class="cta-button" style="background: var(--text-secondary);">
                             ✎ Edit Page
                         </a>
-                        <a href="{{ url_for('admin_pages') }}" class="cta-button" style="background: var(--text-secondary);">
+                        <a href="{{ url_for('admin.admin_pages') }}" class="cta-button" style="background: var(--text-secondary);">
                             ← Back to Pages
                         </a>
                     </div>
