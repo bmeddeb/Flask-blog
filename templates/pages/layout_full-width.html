@@ -93,9 +93,6 @@
             <ul class="nav-links">
                 <li><a href="{{ url_for('index') }}">Home</a></li>
                 <li><a href="{{ url_for('blog_list') }}">Blog</a></li>
-                {% for nav_page in get_nav_pages() %}
-                <li><a href="{{ url_for('view_page', slug=nav_page.slug) }}">{{ nav_page.title }}</a></li>
-                {% endfor %}
                 <li><a href="{{ url_for('admin_dashboard') }}">Admin</a></li>
             </ul>
         </div>
