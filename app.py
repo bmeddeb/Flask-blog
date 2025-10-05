@@ -469,6 +469,54 @@ def admin_edit_page(page_id):
     return render_template('admin/page_form.html', form=form, title='Edit Page', page=page)
 
 
+@app.route('/admin/pages/<int:page_id>/preview')
+@login_required
+def admin_preview_page(page_id):
+    """Preview a page (published or draft)."""
+    page = Page.query.get_or_404(page_id)
+
+    # Render content based on content type
+    if page.content_type == 'markdown':
+        content_html = render_markdown(page.content)
+        sidebar_html = render_markdown(page.sidebar_content) if page.sidebar_content else None
+    else:  # HTML
+        content_html = page.content
+        sidebar_html = page.sidebar_content
+
+    # For blank layout, render content directly without base template
+    if page.layout == 'blank':
+        return content_html
+
+    # Otherwise render with appropriate layout template
+    return render_template(
+        f'pages/layout_{page.layout}.html',
+        page=page,
+        content_html=content_html,
+        sidebar_html=sidebar_html,
+        is_preview=True
+    )
+
+
+@app.route('/admin/pages/<int:page_id>/publish', methods=['POST'])
+@login_required
+def admin_publish_page(page_id):
+    """Publish a draft page."""
+    page = Page.query.get_or_404(page_id)
+
+    # Check ownership
+    if not page.is_owned_by(current_user):
+        flash('You do not have permission to publish this page.', 'error')
+        return redirect(url_for('admin_pages'))
+
+    # Publish the page
+    page.published = True
+    page.published_at = datetime.utcnow()
+    db.session.commit()
+
+    flash('Page published successfully!', 'success')
+    return redirect(url_for('view_page', slug=page.slug))
+
+
 @app.route('/admin/pages/<int:page_id>/delete', methods=['POST'])
 @login_required
 def admin_delete_page(page_id):

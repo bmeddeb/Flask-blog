@@ -100,6 +100,12 @@
 
     <div style="margin-top: 80px;"></div>
 
+    {% if is_preview %}
+    <div style="background: #fff3cd; border-left: 4px solid #856404; padding: 1rem 2rem; margin: 1rem auto; max-width: 1200px; color: #856404; font-weight: 500;">
+        📝 Preview Mode - This page is not published yet
+    </div>
+    {% endif %}
+
     <main>
         <article class="page-content">
             <div class="page-header">
@@ -109,6 +115,28 @@
             <div class="page-body">
                 {{ content_html | safe }}
             </div>
+
+            {% if is_preview and current_user.is_authenticated and page.is_owned_by(current_user) %}
+            <!-- Preview Action Buttons -->
+            <div style="margin-top: 3rem; padding-top: 2rem; border-top: 2px solid var(--border-color);">
+                <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                    {% if not page.published %}
+                    <!-- Draft page actions -->
+                    <form method="POST" action="{{ url_for('admin_publish_page', page_id=page.id) }}" style="display: inline;">
+                        <button type="submit" class="cta-button" style="background: #28a745; margin: 0;">
+                            ✓ Publish Page
+                        </button>
+                    </form>
+                    {% endif %}
+                    <a href="{{ url_for('admin_edit_page', page_id=page.id) }}" class="cta-button" style="background: var(--text-secondary);">
+                        ✎ Edit Page
+                    </a>
+                    <a href="{{ url_for('admin_pages') }}" class="cta-button" style="background: var(--text-secondary);">
+                        ← Back to Pages
+                    </a>
+                </div>
+            </div>
+            {% endif %}
         </article>
     </main>
 
