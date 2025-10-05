@@ -30,7 +30,8 @@
                 {% endif %}
             </td>
             <td>{{ post.author }}</td>
-            <td>{{ post.category or '—' }}</td>
+            {% set cat = post.category_obj.name if post.category_obj else None %}
+            <td>{{ cat or '—' }}</td>
             <td>
                 {% if post.published %}
                     <span class="badge badge-success">Published</span>

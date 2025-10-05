@@ -1,6 +1,12 @@
+import logging
 from datetime import datetime
-from blog_app.extensions import db
+
 from flask_login import UserMixin
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+
+from blog_app.extensions import db
+
+logger = logging.getLogger(__name__)
 
 
 class BlogPost(db.Model):
@@ -22,8 +28,12 @@ class BlogPost(db.Model):
     # Post metadata
     published = db.Column(db.Boolean, default=False, nullable=False)
     featured = db.Column(db.Boolean, default=False, nullable=False)
-    category = db.Column(db.String(50))
-    tags = db.Column(db.String(200))  # Comma-separated tags
+
+    # Taxonomy relations
+    category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=True)
+    category_obj = db.relationship('Category', backref=db.backref('posts', lazy=True))
+    # Association table defined below as 'post_tags'
+    tag_items = db.relationship('Tag', secondary='post_tags', backref=db.backref('posts', lazy=True))
 
     # Timestamps
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
@@ -52,8 +62,8 @@ class BlogPost(db.Model):
             "author": self.author,
             "published": self.published,
             "featured": self.featured,
-            "category": self.category,
-            "tags": self.tags.split(",") if self.tags else [],
+            "category": self.category_obj.name if self.category_obj else None,
+            "tags": [t.name for t in self.tag_items] if self.tag_items else [],
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "published_at": self.published_at.isoformat() if self.published_at else None,
@@ -122,16 +132,30 @@ class Setting(db.Model):
     @staticmethod
     def set(key, value, description=None):
         """Set a setting value."""
-        setting = Setting.query.filter_by(key=key).first()
-        if setting:
-            setting.value = str(value)
-            if description:
-                setting.description = description
-        else:
-            setting = Setting(key=key, value=str(value), description=description)
-            db.session.add(setting)
-        db.session.commit()
-        return setting
+        try:
+            setting = Setting.query.filter_by(key=key).first()
+            if setting:
+                setting.value = str(value)
+                if description:
+                    setting.description = description
+            else:
+                setting = Setting(key=key, value=str(value), description=description)
+                db.session.add(setting)
+
+            try:
+                db.session.commit()
+                return setting
+            except IntegrityError as e:
+                db.session.rollback()
+                logger.error(f"IntegrityError setting {key}: {str(e)}")
+                raise ValueError(f"Setting '{key}' conflicts with existing data")
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                logger.error(f"SQLAlchemyError setting {key}: {str(e)}")
+                raise ValueError(f"Database error setting '{key}'")
+        except Exception as e:
+            logger.error(f"Unexpected error setting {key}: {str(e)}")
+            raise ValueError(f"Failed to set '{key}'")
 
 
 class Page(db.Model):
@@ -193,3 +217,36 @@ class Page(db.Model):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "published_at": self.published_at.isoformat() if self.published_at else None,
         }
+
+
+# =====================
+# Taxonomy Models
+# =====================
+
+class Category(db.Model):
+    __tablename__ = 'categories'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    slug = db.Column(db.String(120), unique=True, nullable=True)
+
+    def __repr__(self):
+        return f'<Category {self.name}>'
+
+
+class Tag(db.Model):
+    __tablename__ = 'tags'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    slug = db.Column(db.String(120), unique=True, nullable=True)
+
+    def __repr__(self):
+        return f'<Tag {self.name}>'
+
+
+post_tags = db.Table(
+    'post_tags',
+    db.Column('post_id', db.Integer, db.ForeignKey('blog_posts.id'), primary_key=True),
+    db.Column('tag_id', db.Integer, db.ForeignKey('tags.id'), primary_key=True),
+)

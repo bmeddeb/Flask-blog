@@ -1,0 +1,50 @@
+{% extends 'admin/base.html' %}
+{% block content %}
+<div class="container">
+  <div class="header">
+    <h1>Tags</h1>
+    <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary">← Back</a>
+  </div>
+
+  <div class="card" style="margin-top: 1rem;">
+    <h2>New Tag</h2>
+    <form method="POST">
+      {{ form.csrf_token }}
+      <div class="form-group">
+        {{ form.name.label }}
+        {{ form.name(class='form-control', placeholder='e.g., flask') }}
+      </div>
+      <div class="form-group">
+        {{ form.slug.label }}
+        {{ form.slug(class='form-control', placeholder='optional-custom-slug') }}
+      </div>
+      <button type="submit" class="btn">Create</button>
+    </form>
+  </div>
+
+  <div class="card" style="margin-top: 1.5rem;">
+    <h2>All Tags</h2>
+    <table class="table">
+      <thead>
+        <tr><th>Name</th><th>Slug</th><th>Posts</th><th></th></tr>
+      </thead>
+      <tbody>
+      {% for t in tags %}
+        <tr>
+          <td>{{ t.name }}</td>
+          <td>{{ t.slug or '—' }}</td>
+          <td>{{ t.posts|length }}</td>
+          <td style="text-align:right;">
+            <a class="btn btn-small btn-secondary" href="{{ url_for('admin.admin_edit_tag', tag_id=t.id) }}">Edit</a>
+            <form method="POST" action="{{ url_for('admin.admin_delete_tag', tag_id=t.id) }}" style="display:inline;" onsubmit="return confirm('Delete tag?');">
+              <button class="btn btn-small btn-danger" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+

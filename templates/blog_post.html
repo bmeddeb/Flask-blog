@@ -182,8 +182,9 @@
     <main>
         <article class="post-content">
             <div class="post-header">
-                {% if post.category %}
-                <span class="card-tag">{{ post.category }}</span>
+                {% set cat = post.category_obj.name if post.category_obj else None %}
+                {% if cat %}
+                <span class="card-tag">{{ cat }}</span>
                 {% endif %}
                 <h1 style="font-size: 2.5rem; margin: 1rem 0;">{{ post.title }}</h1>
                 <div class="post-meta">
@@ -196,10 +197,15 @@
                 {{ post_html | safe }}
             </div>
 
-            {% if post.tags %}
+            {% set tags_list = post.tag_items %}
+            {% if tags_list %}
             <div class="post-tags">
-                {% for tag in post.tags.split(',') %}
-                <span class="tag">{{ tag.strip() }}</span>
+                {% for tag in tags_list %}
+                    {% if tag.__class__.__name__ == 'Tag' %}
+                        <span class="tag">#{{ tag.name }}</span>
+                    {% else %}
+                        <span class="tag">#{{ tag.strip() }}</span>
+                    {% endif %}
                 {% endfor %}
             </div>
             {% endif %}

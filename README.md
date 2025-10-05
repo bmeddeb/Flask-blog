@@ -210,3 +210,8 @@ category = SelectField(
 ## License
 
 MIT License - Feel free to use and modify for your own projects!
+
+- Run migrations:
+  - flask --app app.py db upgrade
+- Existing DB not under Alembic:
+  - flask --app app.py db stamp head, then future changes use migrate/upgrade.

@@ -1,6 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, TextAreaField, BooleanField, SelectField, IntegerField
 from wtforms.validators import DataRequired, Length, Optional, NumberRange
+from wtforms import SubmitField
 
 
 class BlogPostForm(FlaskForm):
@@ -36,18 +37,7 @@ class BlogPostForm(FlaskForm):
         render_kw={"placeholder": "Author name"},
     )
 
-    category = SelectField(
-        "Category",
-        choices=[
-            ("", "Select category"),
-            ("technology", "Technology"),
-            ("programming", "Programming"),
-            ("tutorial", "Tutorial"),
-            ("news", "News"),
-            ("personal", "Personal"),
-        ],
-        validators=[Optional()],
-    )
+    category = SelectField("Category", choices=[], validators=[Optional()])
 
     tags = StringField(
         "Tags",
@@ -58,6 +48,18 @@ class BlogPostForm(FlaskForm):
     published = BooleanField("Published")
 
     featured = BooleanField("Featured")
+
+
+class CategoryForm(FlaskForm):
+    name = StringField("Name", validators=[DataRequired(), Length(max=100)])
+    slug = StringField("Slug", validators=[Optional(), Length(max=120)])
+    submit = SubmitField("Save")
+
+
+class TagForm(FlaskForm):
+    name = StringField("Name", validators=[DataRequired(), Length(max=100)])
+    slug = StringField("Slug", validators=[Optional(), Length(max=120)])
+    submit = SubmitField("Save")
 
 
 class SettingsForm(FlaskForm):

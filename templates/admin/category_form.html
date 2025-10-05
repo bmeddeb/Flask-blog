@@ -1,0 +1,24 @@
+{% extends 'admin/base.html' %}
+{% block content %}
+<div class="container">
+  <div class="header">
+    <h1>{{ title }}</h1>
+    <a href="{{ url_for('admin.admin_categories') }}" class="btn btn-secondary">← Back to Categories</a>
+  </div>
+  <div class="card" style="margin-top: 1rem;">
+    <form method="POST">
+      {{ form.csrf_token }}
+      <div class="form-group">
+        {{ form.name.label }}
+        {{ form.name(class='form-control') }}
+      </div>
+      <div class="form-group">
+        {{ form.slug.label }}
+        {{ form.slug(class='form-control') }}
+      </div>
+      {{ form.submit(class='btn') }}
+    </form>
+  </div>
+</div>
+{% endblock %}
+

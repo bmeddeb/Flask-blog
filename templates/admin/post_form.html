@@ -96,7 +96,7 @@
 
         <div class="form-group">
             {{ form.tags.label }}
-            {{ form.tags(class="form-control") }}
+            {{ form.tags(class="form-control", placeholder="Comma-separated: e.g., flask, python") }}
             {% if form.tags.errors %}
                 <span style="color: #dc3545; font-size: 0.85rem;">{{ form.tags.errors[0] }}</span>
             {% endif %}
@@ -147,7 +147,7 @@ const editor = new Editor({
             formData.append('image', blob);
 
             try {
-                const response = await fetch('{{ url_for("upload_image") }}', {
+                const response = await fetch('{{ url_for("admin.upload_image") }}', {
                     method: 'POST',
                     body: formData,
                     headers: {

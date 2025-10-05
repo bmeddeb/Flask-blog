@@ -31,8 +31,9 @@
             <div class="cards-grid">
                 {% for post in posts %}
                 <div class="card">
-                    {% if post.category %}
-                    <span class="card-tag">{{ post.category }}</span>
+                    {% set cat = post.category_obj.name if post.category_obj else None %}
+                    {% if cat %}
+                    <span class="card-tag">{{ cat }}</span>
                     {% endif %}
                     <h3>{{ post.title }}</h3>
                     <p>{{ post.excerpt or post.content[:150] + '...' }}</p>

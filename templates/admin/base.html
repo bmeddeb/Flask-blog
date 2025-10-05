@@ -327,6 +327,8 @@
                 <li><a href="{{ url_for('public.index') }}">View Site</a></li>
                 <li><a href="{{ url_for('admin.admin_dashboard') }}">Posts</a></li>
                 <li><a href="{{ url_for('admin.admin_pages') }}">Pages</a></li>
+                <li><a href="{{ url_for('admin.admin_categories') }}">Categories</a></li>
+                <li><a href="{{ url_for('admin.admin_tags') }}">Tags</a></li>
                 <li><a href="{{ url_for('admin.admin_settings') }}">Settings</a></li>
                 {% if current_user.is_authenticated %}
                 <li style="display: flex; align-items: center; gap: 0.5rem;">
@@ -335,7 +337,7 @@
                     {% endif %}
                     <span style="color: var(--text-secondary);">{{ current_user.username }}</span>
                 </li>
-                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
                 {% endif %}
             </ul>
         </div>
