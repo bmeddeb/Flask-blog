@@ -46,22 +46,19 @@
             <td>{{ page.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
             <td>
                 <div class="post-actions">
-                    <a href="{{ url_for('admin.admin_edit_page', page_id=page.id) }}" class="btn btn-small btn-secondary">Edit</a>
-                    <form method="POST" action="{{ url_for('admin.admin_delete_page', page_id=page.id) }}" style="display: inline; margin: 0;" id="deletePageForm{{ page.id }}">
-                        <button type="button" class="btn btn-small btn-danger" style="margin: 0;" onclick="confirmDeletePage({{ page.id }}, '{{ page.title }}')">Delete</button>
-                    </form>
+                    <a href="{{ url_for('admin.admin_edit_page', page_id=page.id) }}" class="action-btn edit-btn" title="Edit page">
+                        <i class="iconoir-edit"></i>
+                    </a>
+                    <button type="button" class="action-btn delete-btn" onclick="confirmDeletePage({{ page.id }}, '{{ page.title }}')" title="Delete page">
+                        <i class="iconoir-trash"></i>
+                    </button>
                     {% if page.published %}
-                    <a href="{{ url_for('public.view_page', slug=page.slug) }}" class="btn btn-small" target="_blank" title="View page">
-                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: text-bottom;">
-                            <path d="M0 1.5A1.5 1.5 0 0 1 1.5 0h13A1.5 1.5 0 0 1 16 1.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 14.5v-13zM1.5 1a.5.5 0 0 0-.5.5V5h4V1H1.5zM5 6H1v4h4V6zm1 4h4V6H6v4zm-1 1H1v3.5a.5.5 0 0 0 .5.5H5v-4zm1 0v4h4v-4H6zm5 0v4h3.5a.5.5 0 0 0 .5-.5V11h-4zm0-1h4V6h-4v4zm0-5h4V1.5a.5.5 0 0 0-.5-.5H11v4zm-1 0V1H6v4h4z"/>
-                        </svg>
+                    <a href="{{ url_for('public.view_page', slug=page.slug) }}" class="action-btn view-btn" target="_blank" title="View page">
+                        <i class="iconoir-eye"></i>
                     </a>
                     {% else %}
-                    <a href="{{ url_for('admin.admin_preview_page', page_id=page.id) }}" class="btn btn-small" target="_blank" title="Preview draft">
-                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: text-bottom;">
-                            <path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"/>
-                            <path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8zm8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/>
-                        </svg>
+                    <a href="{{ url_for('admin.admin_preview_page', page_id=page.id) }}" class="action-btn preview-btn" target="_blank" title="Preview draft">
+                        <i class="iconoir-eye"></i>
                     </a>
                     {% endif %}
                 </div>

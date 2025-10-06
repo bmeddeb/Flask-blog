@@ -78,6 +78,16 @@ def create_app(env: str | None = None) -> Flask:
     app.register_blueprint(api_bp)
     app.register_blueprint(auth_bp)
 
+    # Favicon route
+    @app.route('/favicon.ico')
+    def favicon():
+        return app.send_static_file('favicon.ico')
+
+    # Handle Chrome DevTools requests
+    @app.route('/.well-known/appspecific/com.chrome.devtools.json')
+    def chrome_devtools():
+        return '', 204  # No Content
+
     # Context processor
     @app.context_processor
     def inject_nav_pages():
