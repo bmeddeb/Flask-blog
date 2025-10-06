@@ -9,20 +9,182 @@
 <!-- Flatpickr CSS for date/time picker -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css" />
 <style>
+    /* Two-row layout with sidebar content at top */
+    .post-form-layout {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .top-row {
+        display: grid;
+        grid-template-columns: 1fr 300px;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .main-content {
+        min-width: 0; /* Prevents grid overflow */
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Content editor styling */
+    #editor {
+        min-height: 400px;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+    }
+
+    .sidebar-content {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    /* Title and slug in same line */
+    .title-slug-row {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    /* Editor styling */
     #editor {
         margin-bottom: 1rem;
     }
     .toastui-editor-defaultUI {
         border: 1px solid var(--border-color);
-        border-radius: 6px;
+        border-radius: 4px;
     }
-    /* Compact form layout */
+
+    /* Sidebar sections */
+    .sidebar-section {
+        background: var(--accent-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        padding: 1rem;
+    }
+
+    .sidebar-section h3 {
+        margin: 0 0 0.75rem 0;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .sidebar-section .form-group {
+        margin-bottom: 0.75rem;
+    }
+
+    .sidebar-section .form-group:last-child {
+        margin-bottom: 0;
+    }
+
+    /* Toggle switches */
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+    }
+
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: 0.2s;
+        border-radius: 24px;
+    }
+
+    .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.2s;
+        border-radius: 50%;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+        background-color: var(--accent-color);
+    }
+
+    .toggle-switch input:checked + .toggle-slider:before {
+        transform: translateX(20px);
+    }
+
+    .toggle-switch input:focus + .toggle-slider {
+        box-shadow: 0 0 0 2px rgba(139, 115, 85, 0.2);
+    }
+
+    /* Toggle row layout */
+    .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+    }
+
+    .toggle-row:last-child {
+        margin-bottom: 0;
+    }
+
+    .toggle-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+        color: var(--text-primary);
+        cursor: pointer;
+    }
+
+    /* Compact publish section */
+    .publish-section .form-group {
+        margin-bottom: 0.5rem;
+    }
+
+    .publish-section .form-group:last-child {
+        margin-bottom: 0;
+    }
+
+    /* Compact form styling */
     .post-form-container .form-group {
         margin-bottom: 1rem;
     }
+
     .post-form-container small {
         margin-top: 0.25rem;
         display: block;
+        font-size: 0.8rem;
+    }
+
+    /* Responsive design */
+    @media (max-width: 1024px) {
+        .top-row {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .title-slug-row {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 {% endblock %}
@@ -33,104 +195,136 @@
     <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
 </div>
 
-<div class="card post-form-container" style="max-width: 1100px;">
+<div class="post-form-layout">
     <form method="POST" novalidate>
         {{ form.hidden_tag() }}
 
-        <div class="form-group">
-            {{ form.title.label }}
-            {{ form.title(class="form-control") }}
-            {% if form.title.errors %}
-                <span style="color: #dc3545; font-size: 0.85rem;">{{ form.title.errors[0] }}</span>
-            {% endif %}
-        </div>
+        <!-- Top Row: Title/Slug/Excerpt/Content + Sidebar Content -->
+        <div class="top-row">
+            <!-- Main Content Area (75%) -->
+            <div class="main-content">
+                <!-- Title and Slug Row -->
+                <div class="title-slug-row">
+                    <div class="form-group">
+                        {{ form.title.label }}
+                        {{ form.title(class="form-control") }}
+                        {% if form.title.errors %}
+                            <span style="color: #dc3545; font-size: 0.85rem;">{{ form.title.errors[0] }}</span>
+                        {% endif %}
+                    </div>
 
-        <div class="form-group">
-            {{ form.slug.label }}
-            {{ form.slug(class="form-control") }}
-            {% if form.slug.errors %}
-                <span style="color: #dc3545; font-size: 0.85rem;">{{ form.slug.errors[0] }}</span>
-            {% endif %}
-            <small style="color: var(--text-secondary); font-size: 0.85rem;">
-                URL-friendly version of the title (e.g., my-blog-post)
-            </small>
-        </div>
+                    <div class="form-group">
+                        {{ form.slug.label }}
+                        {{ form.slug(class="form-control") }}
+                        {% if form.slug.errors %}
+                            <span style="color: #dc3545; font-size: 0.85rem;">{{ form.slug.errors[0] }}</span>
+                        {% endif %}
+                        <small style="color: var(--text-secondary); font-size: 0.8rem;">
+                            URL-friendly version
+                        </small>
+                    </div>
+                </div>
 
-        <div class="form-group">
-            {{ form.excerpt.label }}
-            {{ form.excerpt(class="form-control") }}
-            {% if form.excerpt.errors %}
-                <span style="color: #dc3545; font-size: 0.85rem;">{{ form.excerpt.errors[0] }}</span>
-            {% endif %}
-            <small style="color: var(--text-secondary); font-size: 0.85rem;">
-                Brief summary shown in post listings
-            </small>
-        </div>
+                <!-- Excerpt -->
+                <div class="form-group">
+                    {{ form.excerpt.label }}
+                    {{ form.excerpt(class="form-control") }}
+                    {% if form.excerpt.errors %}
+                        <span style="color: #dc3545; font-size: 0.85rem;">{{ form.excerpt.errors[0] }}</span>
+                    {% endif %}
+                    <small style="color: var(--text-secondary); font-size: 0.8rem;">
+                        Brief summary shown in post listings
+                    </small>
+                </div>
 
-        <div class="form-group">
-            {{ form.content.label }}
-            <!-- Toast UI Editor Container -->
-            <div id="editor"></div>
-            <!-- Hidden field to store markdown content -->
-            {{ form.content(style="display: none;") }}
-            {% if form.content.errors %}
-                <span style="color: #dc3545; font-size: 0.85rem;">{{ form.content.errors[0] }}</span>
-            {% endif %}
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div class="form-group">
-                {{ form.author.label }}
-                {{ form.author(class="form-control") }}
-                {% if form.author.errors %}
-                    <span style="color: #dc3545; font-size: 0.85rem;">{{ form.author.errors[0] }}</span>
-                {% endif %}
+                <!-- Content Editor -->
+                <div class="form-group">
+                    {{ form.content.label }}
+                    <!-- Toast UI Editor Container -->
+                    <div id="editor"></div>
+                    <!-- Hidden field to store markdown content -->
+                    {{ form.content(style="display: none;") }}
+                    {% if form.content.errors %}
+                        <span style="color: #dc3545; font-size: 0.85rem;">{{ form.content.errors[0] }}</span>
+                    {% endif %}
+                </div>
             </div>
 
-            <div class="form-group">
-                {{ form.category.label }}
-                {{ form.category(class="form-control") }}
-                {% if form.category.errors %}
-                    <span style="color: #dc3545; font-size: 0.85rem;">{{ form.category.errors[0] }}</span>
-                {% endif %}
+            <!-- Sidebar Content (25%) -->
+            <div class="sidebar-content">
+                <!-- Publish Section -->
+                <div class="sidebar-section publish-section">
+                    <h3>Publish</h3>
+
+                    <!-- Published and Featured toggles in same row -->
+                    <div class="toggle-row">
+                        <label class="toggle-label" for="published">
+                            <span>Published</span>
+                        </label>
+                        <div class="toggle-switch">
+                            {{ form.published(id="published") }}
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </div>
+
+                    <div class="toggle-row">
+                        <label class="toggle-label" for="featured">
+                            <span>Featured</span>
+                        </label>
+                        <div class="toggle-switch">
+                            {{ form.featured(id="featured") }}
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.published_at.label }}
+                        {{ form.published_at(class="form-control", id="publishedAtInput", type="text") }}
+                        <small style="color: var(--text-secondary); font-size: 0.8rem;">
+                            Set publish date/time
+                        </small>
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                        <button type="submit" class="btn" style="flex: 1;">
+                            {% if post %}Update Post{% else %}Create Post{% endif %}
+                        </button>
+                        <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </div>
+
+                <!-- Post Attributes Section -->
+                <div class="sidebar-section">
+                    <h3>Post Attributes</h3>
+
+                    <div class="form-group">
+                        {{ form.author.label }}
+                        {{ form.author(class="form-control") }}
+                        {% if form.author.errors %}
+                            <span style="color: #dc3545; font-size: 0.85rem;">{{ form.author.errors[0] }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.category.label }}
+                        {{ form.category(class="form-control") }}
+                        {% if form.category.errors %}
+                            <span style="color: #dc3545; font-size: 0.85rem;">{{ form.category.errors[0] }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.tags.label }}
+                        {{ form.tags(class="form-control", placeholder="Comma-separated: e.g., flask, python") }}
+                        {% if form.tags.errors %}
+                            <span style="color: #dc3545; font-size: 0.85rem;">{{ form.tags.errors[0] }}</span>
+                        {% endif %}
+                        <small style="color: var(--text-secondary); font-size: 0.8rem;">
+                            Separate tags with commas
+                        </small>
+                    </div>
+                </div>
             </div>
-        </div>
-
-        <div class="form-group">
-            {{ form.tags.label }}
-            {{ form.tags(class="form-control", placeholder="Comma-separated: e.g., flask, python") }}
-            {% if form.tags.errors %}
-                <span style="color: #dc3545; font-size: 0.85rem;">{{ form.tags.errors[0] }}</span>
-            {% endif %}
-        </div>
-
-        <div style="display: flex; gap: 2rem; margin-bottom: 1.5rem;">
-            <div class="form-group" style="margin-bottom: 0;">
-                <label class="checkbox-label">
-                    {{ form.published() }}
-                    {{ form.published.label.text }}
-                </label>
-            </div>
-
-            <div class="form-group" style="margin-bottom: 0;">
-                <label class="checkbox-label">
-                    {{ form.featured() }}
-                    {{ form.featured.label.text }}
-                </label>
-            </div>
-        </div>
-
-        <div class="form-group" style="max-width: 320px;">
-            {{ form.published_at.label }}
-            {{ form.published_at(class="form-control", id="publishedAtInput", type="text") }}
-            <small style="color: var(--text-secondary); font-size: 0.85rem;">Set publish date/time (local time). Enabled when Published is checked.</small>
-        </div>
-
-        <div style="display: flex; gap: 1rem;">
-            <button type="submit" class="btn">
-                {% if post %}Update Post{% else %}Create Post{% endif %}
-            </button>
-            <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>
@@ -205,9 +399,10 @@ document.querySelector('#title').addEventListener('input', function(e) {
 
 // Toggle published_at field enablement
 (function() {
-  const publishedCheckbox = document.querySelector('input[name="published"]');
+  const publishedCheckbox = document.querySelector('#published');
   const publishedAtInput = document.getElementById('publishedAtInput');
   let fp;
+
   function initPicker() {
     if (!publishedAtInput || typeof flatpickr === 'undefined') return;
     if (fp) { fp.destroy(); }
@@ -218,6 +413,7 @@ document.querySelector('#title').addEventListener('input', function(e) {
       dateFormat: 'Y-m-d\\TH:i', // Matches WTForms parsing
     });
   }
+
   function updateState() {
     if (!publishedCheckbox || !publishedAtInput) return;
     const isPub = publishedCheckbox.checked;
@@ -237,9 +433,49 @@ document.querySelector('#title').addEventListener('input', function(e) {
       if (fp) fp.setDate(val, true, 'Y-m-d\\TH:i');
     }
   }
-  initPicker();
-  updateState();
-  if (publishedCheckbox) publishedCheckbox.addEventListener('change', updateState);
+
+  // Initialize when DOM is ready
+  document.addEventListener('DOMContentLoaded', function() {
+    initPicker();
+    updateState();
+    if (publishedCheckbox) {
+      publishedCheckbox.addEventListener('change', updateState);
+    }
+  });
 })();
+
+// Ensure toggle switches work properly
+document.addEventListener('DOMContentLoaded', function() {
+  // Make toggle sliders clickable
+  const toggleSwitches = document.querySelectorAll('.toggle-switch');
+
+  toggleSwitches.forEach(toggleSwitch => {
+    const slider = toggleSwitch.querySelector('.toggle-slider');
+    const checkbox = toggleSwitch.querySelector('input[type="checkbox"]');
+
+    if (slider && checkbox) {
+      slider.addEventListener('click', function(e) {
+        e.preventDefault();
+        checkbox.checked = !checkbox.checked;
+        checkbox.dispatchEvent(new Event('change'));
+      });
+    }
+  });
+
+  // Make toggle labels work (clicking the text)
+  const toggleLabels = document.querySelectorAll('.toggle-label');
+  toggleLabels.forEach(label => {
+    label.addEventListener('click', function(e) {
+      const forAttr = label.getAttribute('for');
+      if (forAttr) {
+        const checkbox = document.getElementById(forAttr);
+        if (checkbox) {
+          checkbox.checked = !checkbox.checked;
+          checkbox.dispatchEvent(new Event('change'));
+        }
+      }
+    });
+  });
+});
 </script>
 {% endblock %}

@@ -15,12 +15,14 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 // Navbar background on scroll
 window.addEventListener('scroll', () => {
     const nav = document.querySelector('nav');
-    if (window.scrollY > 100) {
-        nav.style.background = 'rgba(253, 251, 247, 0.98)';
-        nav.style.boxShadow = '0 2px 10px rgba(0,0,0,0.05)';
-    } else {
-        nav.style.background = 'rgba(253, 251, 247, 0.95)';
-        nav.style.boxShadow = 'none';
+    if (nav) {
+        if (window.scrollY > 100) {
+            nav.style.background = 'rgba(253, 251, 247, 0.98)';
+            nav.style.boxShadow = '0 2px 10px rgba(0,0,0,0.05)';
+        } else {
+            nav.style.background = 'rgba(253, 251, 247, 0.95)';
+            nav.style.boxShadow = 'none';
+        }
     }
 });
 

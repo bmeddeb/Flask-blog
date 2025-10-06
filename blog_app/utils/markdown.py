@@ -5,7 +5,7 @@ from markdown.extensions.tables import TableExtension
 
 
 def render_markdown(text: str) -> str:
-    """Convert markdown to HTML with syntax highlighting."""
+    """Convert markdown to HTML with syntax highlighting and LaTeX math support."""
     md = markdown.Markdown(
         extensions=[
             FencedCodeExtension(),
@@ -13,6 +13,12 @@ def render_markdown(text: str) -> str:
             TableExtension(),
             "nl2br",
             "sane_lists",
-        ]
+            "mdx_math",  # LaTeX math support
+        ],
+        extension_configs={
+            "mdx_math": {
+                "enable_dollar_delimiter": True,  # Enable $...$ for inline math
+            }
+        },
     )
     return md.convert(text or "")

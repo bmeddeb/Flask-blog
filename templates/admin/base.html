@@ -9,7 +9,8 @@
     {% block head %}{% endblock %}
     <style>
         /* Admin layout (WordPress-like) */
-        .admin-shell { display: grid; grid-template-columns: 240px 1fr; }
+        .admin-shell { display: grid; grid-template-columns: 240px 1fr; transition: grid-template-columns 0.2s ease; }
+        .admin-shell.sidebar-collapsed { grid-template-columns: 64px 1fr; }
         .sidebar { position: sticky; top: 0; height: 100vh; background: var(--secondary-bg); border-right: 1px solid var(--border-color); padding-top: 6px; transition: width 0.2s ease; }
         .sidebar ul { list-style: none; margin: 0; padding: 0.5rem; }
         .sidebar a { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; color: var(--text-primary); text-decoration: none; border-radius: 4px; font-size: 0.85rem; }
@@ -610,6 +611,7 @@
         // Sidebar toggle with persistence and mobile support
         (function() {
             const sidebar = document.getElementById('sidebar');
+            const adminShell = document.querySelector('.admin-shell');
             const toggle = document.getElementById('sidebarToggle');
             const key = 'adminSidebarCollapsed';
 
@@ -622,10 +624,12 @@
                     // On mobile, just toggle open/closed
                     sidebar.classList.remove('collapsed');
                     sidebar.classList.remove('open');
+                    adminShell.classList.remove('sidebar-collapsed');
                 } else {
                     // On desktop, use collapsed state
                     const collapsed = localStorage.getItem(key) === '1';
                     sidebar.classList.toggle('collapsed', collapsed);
+                    adminShell.classList.toggle('sidebar-collapsed', collapsed);
                     sidebar.classList.remove('open');
 
                     // Close any open submenus when sidebar is collapsed
@@ -645,6 +649,7 @@
                     sidebar.classList.toggle('open');
                 } else {
                     const collapsed = sidebar.classList.toggle('collapsed');
+                    adminShell.classList.toggle('sidebar-collapsed', collapsed);
                     localStorage.setItem(key, collapsed ? '1' : '0');
 
                     // Close any open submenus when collapsing
@@ -669,6 +674,7 @@
         // General submenu toggle for all menu items with submenus
         (function() {
             const menuItemsWithChildren = document.querySelectorAll('.menu-item.has-children');
+            const adminShell = document.querySelector('.admin-shell');
 
             menuItemsWithChildren.forEach(item => {
                 const link = item.querySelector('a.menu-link');
@@ -694,6 +700,7 @@
 
                         // Expand the sidebar
                         sidebar.classList.remove('collapsed');
+                        adminShell.classList.remove('sidebar-collapsed');
                         localStorage.setItem('adminSidebarCollapsed', '0');
 
                         // Open the submenu
