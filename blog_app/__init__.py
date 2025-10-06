@@ -10,7 +10,7 @@ from flask_login import current_user, login_required, login_user, logout_user
 from blog_app.cli import register_cli
 from blog_app.extensions import db, login_manager, migrate, oauth
 from config import config as config_map
-from models import Page, User
+from models import Post, User
 
 
 def create_app(env: str | None = None) -> Flask:
@@ -92,11 +92,19 @@ def create_app(env: str | None = None) -> Flask:
     @app.context_processor
     def inject_nav_pages():
         def get_nav_pages():
-            return (
-                Page.query.filter_by(published=True, show_in_nav=True)
-                .order_by(Page.nav_order)
-                .all()
-            )
+            # WordPress-style: get pages with show_in_nav meta
+            from models import PostMeta
+            pages = Post.query.filter_by(post_type='page', post_status='publish').all()
+            # Filter pages that have show_in_nav=1 in meta
+            nav_pages = []
+            for page in pages:
+                show_in_nav = page.get_meta('show_in_nav', '0')
+                if show_in_nav == '1':
+                    nav_order = int(page.get_meta('nav_order', '0'))
+                    nav_pages.append((nav_order, page))
+            # Sort by nav_order
+            nav_pages.sort(key=lambda x: x[0])
+            return [p[1] for p in nav_pages]
 
         return dict(get_nav_pages=get_nav_pages)
 

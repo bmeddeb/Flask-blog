@@ -113,9 +113,26 @@
             }
         }
 
-        .topbar { position: sticky; top: 0; grid-column: 1 / span 2; height: 36px; display: flex; align-items: center; justify-content: space-between; padding: 0 1rem; background: var(--accent-bg); border-bottom: 1px solid var(--border-color); z-index: 10; }
+        .topbar { position: sticky; top: 0; grid-column: 1 / span 2; min-height: 36px; display: flex; align-items: center; justify-content: space-between; padding: 0 1rem; background: var(--accent-bg); border-bottom: 1px solid var(--border-color); z-index: 10; flex-wrap: wrap; }
         .topbar .left { display: flex; align-items: center; gap: 0.5rem; }
         .topbar .right { display: flex; align-items: center; gap: 0.5rem; }
+        .topbar .center { display: flex; align-items: center; gap: 0.5rem; flex: 1; justify-content: center; max-width: 800px; margin: 0 auto; }
+
+        /* Topbar Filters */
+        .topbar-filters { display: none; width: 100%; padding: 0.5rem 0; border-top: 1px solid var(--border-color); }
+        .topbar-filters.active { display: flex; }
+        .topbar-filters form { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; width: 100%; }
+        .topbar-filter-item { position: relative; display: flex; align-items: center; }
+        .topbar-filter-item input,
+        .topbar-filter-item select { font-size: 0.75rem; padding: 0.3rem 0.5rem; height: 28px; border: 1px solid var(--border-color); border-radius: 3px; background: white; min-width: 120px; }
+        .topbar-filter-item input:focus,
+        .topbar-filter-item select:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 2px rgba(139, 115, 85, 0.1); }
+        .topbar-filter-icon { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: rgba(139, 115, 85, 0.1); border-radius: 3px; color: var(--accent-color); margin-right: 0.3rem; }
+        .topbar-filter-icon i { font-size: 12px; }
+        .topbar-filter-item .btn { padding: 0.3rem 0.6rem; font-size: 0.75rem; height: 28px; }
+        .filter-toggle-btn { background: rgba(139, 115, 85, 0.1); color: var(--accent-color); }
+        .filter-toggle-btn:hover { background: rgba(139, 115, 85, 0.2); }
+        .filter-toggle-btn.active { background: var(--accent-color); color: white; }
         .icon-btn { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; color: var(--text-primary); text-decoration: none; }
         .icon-btn i { font-size: 14px; }
         .icon-btn:hover { background: rgba(0,0,0,0.06); }
@@ -545,7 +562,11 @@
             <button id="sidebarToggle" class="icon-btn" title="Toggle menu" aria-label="Toggle menu"><i class="iconoir-menu"></i></button>
             <strong>Blog Admin</strong>
         </div>
+        <div class="center">
+            {% block topbar_center %}{% endblock %}
+        </div>
         <div class="right">
+            {% block topbar_actions %}{% endblock %}
             <a class="icon-btn" href="{{ url_for('public.index') }}" title="View Site" aria-label="View Site">
                 <i class="iconoir-home"></i>
             </a>
@@ -558,6 +579,7 @@
               </a>
             {% endif %}
         </div>
+        {% block topbar_filters %}{% endblock %}
     </div>
 
     <div class="admin-shell">

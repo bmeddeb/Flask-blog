@@ -28,7 +28,7 @@ from blog_app.utils.images import (
 from blog_app.utils.markdown import render_markdown
 from blog_app.utils.slug import slugify, ensure_unique_slug
 from forms import BlogPostForm, CategoryForm, PageForm, SettingsForm, TagForm
-from models import BlogPost, Category, Page, Setting, Tag
+from models import Post, PostType, PostMeta, Category, Setting, Tag
 
 logger = logging.getLogger(__name__)
 
@@ -45,30 +45,32 @@ def admin_dashboard():
     page = request.args.get('page', default=1, type=int)
     status = request.args.get('status', default='', type=str)
 
-    q = BlogPost.query
+    # WordPress-style: only show blog posts (post_type='post')
+    q = Post.query.filter_by(post_type='post')
+
     if category_id:
-        q = q.filter(BlogPost.category_id == category_id)
+        q = q.filter(Post.category_id == category_id)
     if tag_id:
-        q = q.join(BlogPost.tag_items).filter(Tag.id == tag_id)
+        q = q.join(Post.tag_items).filter(Tag.id == tag_id)
     if query_text:
         like = f"%{query_text}%"
-        q = q.filter(or_(BlogPost.title.ilike(like), BlogPost.excerpt.ilike(like), BlogPost.author.ilike(like)))
+        q = q.filter(or_(Post.title.ilike(like), Post.excerpt.ilike(like), Post.author.ilike(like)))
     if status == 'published':
-        q = q.filter(BlogPost.published.is_(True))
+        q = q.filter(Post.post_status == 'publish')
     elif status == 'draft':
-        q = q.filter(BlogPost.published.is_(False), BlogPost.published_at.is_(None))
+        q = q.filter(Post.post_status == 'draft', Post.published_at.is_(None))
     elif status == 'scheduled':
         from datetime import datetime as _dt
         now = _dt.utcnow()
-        q = q.filter(BlogPost.published.is_(False), BlogPost.published_at.is_not(None), BlogPost.published_at > now)
+        q = q.filter(Post.post_status == 'draft', Post.published_at.is_not(None), Post.published_at > now)
 
     from flask import current_app
     per_page = current_app.config.get('ADMIN_POSTS_PER_PAGE', 10)
     # Sort by published_at desc, drafts (NULL) last; fallback by created_at desc
     pagination = db.paginate(
         q.order_by(
-            nullslast(BlogPost.published_at.desc()),
-            BlogPost.created_at.desc(),
+            nullslast(Post.published_at.desc()),
+            Post.created_at.desc(),
         ),
         page=page,
         per_page=per_page,
@@ -100,7 +102,8 @@ def admin_new_post():
     categories = Category.query.order_by(Category.name.asc()).all()
     form.category.choices = [("", "Select category")] + [(str(c.id), c.name) for c in categories]
     if form.validate_on_submit():
-        post = BlogPost(
+        post = Post(
+            post_type='post',  # WordPress-style: specify post type
             title=form.title.data,
             slug=form.slug.data,
             content=form.content.data,
@@ -153,7 +156,7 @@ def admin_new_post():
 @bp.route("/posts/<int:post_id>/edit", methods=["GET", "POST"])
 @login_required
 def admin_edit_post(post_id):
-    post = BlogPost.query.get_or_404(post_id)
+    post = Post.query.get_or_404(post_id)
     form = BlogPostForm(obj=post)
     categories = Category.query.order_by(Category.name.asc()).all()
     form.category.choices = [("", "Select category")] + [(str(c.id), c.name) for c in categories]
@@ -383,7 +386,7 @@ def admin_delete_tag(tag_id):
 @bp.route("/posts/<int:post_id>/preview")
 @login_required
 def admin_preview_post(post_id):
-    post = BlogPost.query.get_or_404(post_id)
+    post = Post.query.get_or_404(post_id)
     post_html = render_markdown(post.content)
     return render_template("blog_post.html", post=post, post_html=post_html, is_preview=True)
 
@@ -391,7 +394,7 @@ def admin_preview_post(post_id):
 @bp.route("/posts/<int:post_id>/publish", methods=["POST"])
 @login_required
 def admin_publish_post(post_id):
-    post = BlogPost.query.get_or_404(post_id)
+    post = Post.query.get_or_404(post_id)
     if not post.is_owned_by(current_user):
         flash("You do not have permission to publish this post.", "error")
         return redirect(url_for("admin.admin_dashboard"))
@@ -410,7 +413,7 @@ def admin_publish_post(post_id):
 @bp.route("/posts/<int:post_id>/delete", methods=["POST"])
 @login_required
 def admin_delete_post(post_id):
-    post = BlogPost.query.get_or_404(post_id)
+    post = Post.query.get_or_404(post_id)
     db.session.delete(post)
     db.session.commit()
     flash("Post deleted successfully!", "success")
@@ -452,7 +455,8 @@ def admin_settings():
 @bp.route("/pages")
 @login_required
 def admin_pages():
-    pages = Page.query.order_by(Page.created_at.desc()).all()
+    # WordPress-style: pages are posts with post_type='page'
+    pages = Post.query.filter_by(post_type='page').order_by(Post.created_at.desc()).all()
     return render_template("admin/pages.html", pages=pages)
 
 
@@ -461,24 +465,35 @@ def admin_pages():
 def admin_new_page():
     form = PageForm()
     if form.validate_on_submit():
-        page = Page(
+        # WordPress-style: pages are posts with post_type='page'
+        page = Post(
             title=form.title.data,
             slug=form.slug.data,
             content=form.content.data,
-            sidebar_content=form.sidebar_content.data,
-            layout=form.layout.data,
-            content_type=form.content_type.data,
-            published=form.published.data,
-            show_in_nav=form.show_in_nav.data,
-            nav_order=form.nav_order.data or 0,
+            post_type='page',
+            post_status='publish' if form.published.data else 'draft',
             user_id=current_user.id,
         )
         if form.published.data:
             page.published_at = datetime.utcnow()
+
+        # Store page-specific metadata in PostMeta
+        db.session.add(page)
+        db.session.flush()  # Get the ID
+
+        page.set_meta('sidebar_content', form.sidebar_content.data or '')
+        page.set_meta('layout', form.layout.data)
+        page.set_meta('content_type', form.content_type.data)
+        page.set_meta('show_in_nav', '1' if form.show_in_nav.data else '0')
+        page.set_meta('nav_order', str(form.nav_order.data or 0))
+
         try:
-            success, error = safe_db_add(page, "Page created successfully!", "Failed to create page")
+            success, error = safe_db_commit()
             if success:
+                flash("Page created successfully!", "success")
                 return redirect(url_for("admin.admin_pages"))
+            else:
+                flash(error, "error")
         except Exception as e:
             logger.error(f"Error creating page: {str(e)}")
             flash("Failed to create page. Please try again.", "error")
@@ -488,21 +503,34 @@ def admin_new_page():
 @bp.route("/pages/<int:page_id>/edit", methods=["GET", "POST"])
 @login_required
 def admin_edit_page(page_id):
-    page = Page.query.get_or_404(page_id)
+    page = Post.query.filter_by(id=page_id, post_type='page').first_or_404()
+
+    # Populate form with page data including metadata
     form = PageForm(obj=page)
+    if request.method == 'GET':
+        form.sidebar_content.data = page.get_meta('sidebar_content', '')
+        form.layout.data = page.get_meta('layout', 'full-width')
+        form.content_type.data = page.get_meta('content_type', 'markdown')
+        form.show_in_nav.data = page.get_meta('show_in_nav', '0') == '1'
+        form.nav_order.data = int(page.get_meta('nav_order', '0'))
+
     if form.validate_on_submit():
         page.title = form.title.data
         page.slug = form.slug.data
         page.content = form.content.data
-        page.sidebar_content = form.sidebar_content.data
-        page.layout = form.layout.data
-        page.content_type = form.content_type.data
-        page.show_in_nav = form.show_in_nav.data
-        page.nav_order = form.nav_order.data or 0
+
         was_published = page.published
-        page.published = form.published.data
+        page.post_status = 'publish' if form.published.data else 'draft'
         if form.published.data and not was_published:
             page.published_at = datetime.utcnow()
+
+        # Update page metadata
+        page.set_meta('sidebar_content', form.sidebar_content.data or '')
+        page.set_meta('layout', form.layout.data)
+        page.set_meta('content_type', form.content_type.data)
+        page.set_meta('show_in_nav', '1' if form.show_in_nav.data else '0')
+        page.set_meta('nav_order', str(form.nav_order.data or 0))
+
         try:
             success, error = safe_db_commit()
             if success:
@@ -519,17 +547,24 @@ def admin_edit_page(page_id):
 @bp.route("/pages/<int:page_id>/preview")
 @login_required
 def admin_preview_page(page_id):
-    page = Page.query.get_or_404(page_id)
-    if page.content_type == "markdown":
+    page = Post.query.filter_by(id=page_id, post_type='page').first_or_404()
+
+    content_type = page.get_meta('content_type', 'markdown')
+    layout = page.get_meta('layout', 'full-width')
+    sidebar_content = page.get_meta('sidebar_content', '')
+
+    if content_type == "markdown":
         content_html = render_markdown(page.content)
-        sidebar_html = render_markdown(page.sidebar_content) if page.sidebar_content else None
+        sidebar_html = render_markdown(sidebar_content) if sidebar_content else None
     else:
         content_html = page.content
-        sidebar_html = page.sidebar_content
-    if page.layout == "blank":
+        sidebar_html = sidebar_content
+
+    if layout == "blank":
         return content_html
+
     return render_template(
-        f"pages/layout_{page.layout}.html",
+        f"pages/layout_{layout}.html",
         page=page,
         content_html=content_html,
         sidebar_html=sidebar_html,
@@ -540,11 +575,11 @@ def admin_preview_page(page_id):
 @bp.route("/pages/<int:page_id>/publish", methods=["POST"])
 @login_required
 def admin_publish_page(page_id):
-    page = Page.query.get_or_404(page_id)
+    page = Post.query.filter_by(id=page_id, post_type='page').first_or_404()
     if not page.is_owned_by(current_user):
         flash("You do not have permission to publish this page.", "error")
         return redirect(url_for("admin.admin_pages"))
-    page.published = True
+    page.post_status = 'publish'
     page.published_at = datetime.utcnow()
     try:
         success, error = safe_db_commit()
@@ -562,7 +597,7 @@ def admin_publish_page(page_id):
 @bp.route("/pages/<int:page_id>/delete", methods=["POST"])
 @login_required
 def admin_delete_page(page_id):
-    page = Page.query.get_or_404(page_id)
+    page = Post.query.filter_by(id=page_id, post_type='page').first_or_404()
     try:
         db.session.delete(page)
         success, error = safe_db_commit()
@@ -645,3 +680,44 @@ def upload_image():
         url = url_for("static", filename=f"uploads/{filename}")
         return jsonify({"url": url})
     return jsonify({"error": "Invalid file type"}), 400
+
+
+@bp.route("/api/tags/search")
+@login_required
+def api_tags_search():
+    """API endpoint for tag autocomplete."""
+    query = request.args.get("q", "").strip()
+    if not query:
+        # Return all tags if no query
+        tags = Tag.query.order_by(Tag.name.asc()).limit(20).all()
+    else:
+        # Search tags by name
+        tags = Tag.query.filter(Tag.name.ilike(f"%{query}%")).order_by(Tag.name.asc()).limit(10).all()
+
+    return jsonify([{"id": tag.id, "name": tag.name} for tag in tags])
+
+
+@bp.route("/api/posts/search")
+@login_required
+def api_posts_search():
+    """API endpoint for post search autocomplete."""
+    query = request.args.get("q", "").strip()
+    if not query or len(query) < 2:
+        return jsonify([])
+
+    # Search in title, excerpt, and author
+    like = f"%{query}%"
+    posts = Post.query.filter(
+        or_(
+            Post.title.ilike(like),
+            Post.excerpt.ilike(like),
+            Post.author.ilike(like)
+        )
+    ).order_by(Post.created_at.desc()).limit(10).all()
+
+    return jsonify([{
+        "id": post.id,
+        "title": post.title,
+        "author": post.author,
+        "excerpt": post.excerpt[:100] if post.excerpt else None
+    } for post in posts])

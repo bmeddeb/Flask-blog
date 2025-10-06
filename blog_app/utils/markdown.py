@@ -1,15 +1,13 @@
 import markdown
-from markdown.extensions.codehilite import CodeHiliteExtension
 from markdown.extensions.fenced_code import FencedCodeExtension
 from markdown.extensions.tables import TableExtension
 
 
 def render_markdown(text: str) -> str:
-    """Convert markdown to HTML with syntax highlighting and LaTeX math support."""
+    """Convert markdown to HTML with LaTeX math support and client-side syntax highlighting."""
     md = markdown.Markdown(
         extensions=[
-            FencedCodeExtension(),
-            CodeHiliteExtension(css_class="highlight", linenums=False),
+            FencedCodeExtension(),  # Fenced code blocks with language support
             TableExtension(),
             "nl2br",
             "sane_lists",

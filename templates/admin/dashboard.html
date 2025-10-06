@@ -2,40 +2,349 @@
 
 {% block title %}Dashboard{% endblock %}
 
+{% block topbar_actions %}
+<button id="filterToggleBtn" class="icon-btn filter-toggle-btn" title="Toggle Filters" aria-label="Toggle Filters">
+    <i class="iconoir-filter"></i>
+</button>
+{% endblock %}
+
+{% block topbar_filters %}
+<div class="topbar-filters" id="topbarFilters">
+    <form method="GET" style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; width: 100%;">
+        <!-- Category -->
+        <div class="topbar-filter-item">
+            <span class="topbar-filter-icon" title="Category"><i class="iconoir-folder"></i></span>
+            <select name="category" class="form-control">
+                <option value="">All Categories</option>
+                {% for c in categories or [] %}
+                <option value="{{ c.id }}" {% if selected_category == c.id %}selected{% endif %}>{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Tag -->
+        <div class="topbar-filter-item">
+            <span class="topbar-filter-icon" title="Tag"><i class="iconoir-bookmark"></i></span>
+            <div class="autocomplete-wrapper">
+                <input
+                    type="text"
+                    id="topbarTagInput"
+                    class="form-control"
+                    placeholder="Tag..."
+                    autocomplete="off"
+                    value="{% if selected_tag %}{% for t in tags %}{% if t.id == selected_tag %}{{ t.name }}{% endif %}{% endfor %}{% endif %}"
+                >
+                <input type="hidden" name="tag" id="topbarTagId" value="{{ selected_tag or '' }}">
+                <div class="autocomplete-results" id="topbarTagResults"></div>
+            </div>
+        </div>
+
+        <!-- Search -->
+        <div class="topbar-filter-item">
+            <span class="topbar-filter-icon" title="Search"><i class="iconoir-search"></i></span>
+            <input
+                type="text"
+                name="q"
+                id="topbarSearchInput"
+                class="form-control"
+                placeholder="Search..."
+                autocomplete="off"
+                value="{{ search_query or '' }}"
+            >
+        </div>
+
+        <!-- Status -->
+        <div class="topbar-filter-item">
+            <span class="topbar-filter-icon" title="Status"><i class="iconoir-eye"></i></span>
+            <select name="status" class="form-control">
+                <option value="" {% if not selected_status %}selected{% endif %}>All</option>
+                <option value="published" {% if selected_status == 'published' %}selected{% endif %}>Published</option>
+                <option value="draft" {% if selected_status == 'draft' %}selected{% endif %}>Draft</option>
+                <option value="scheduled" {% if selected_status == 'scheduled' %}selected{% endif %}>Scheduled</option>
+            </select>
+        </div>
+
+        <!-- Actions -->
+        <button type="submit" class="btn btn-small">Apply</button>
+        {% if selected_category or selected_tag or search_query or selected_status %}
+        <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary btn-small">Clear</a>
+        {% endif %}
+    </form>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+    .filter-section {
+        background: var(--accent-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        padding: 0.75rem;
+        margin: 1rem 0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 0.5rem;
+        align-items: end;
+    }
+
+    .filter-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        position: relative;
+    }
+
+    .filter-field label {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    .filter-field input,
+    .filter-field select {
+        padding: 0.4rem 0.6rem;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        font-size: 0.85rem;
+        background: white;
+        transition: all 0.2s;
+        height: 32px;
+    }
+
+    .filter-field input:focus,
+    .filter-field select:focus {
+        outline: none;
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 2px rgba(139, 115, 85, 0.1);
+    }
+
+    .autocomplete-wrapper {
+        position: relative;
+    }
+
+    .autocomplete-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid var(--border-color);
+        border-top: none;
+        border-radius: 0 0 4px 4px;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+        display: none;
+    }
+
+    .autocomplete-results.active {
+        display: block;
+    }
+
+    .autocomplete-item {
+        padding: 0.5rem 0.6rem;
+        cursor: pointer;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        transition: background 0.15s;
+        font-size: 0.85rem;
+    }
+
+    .autocomplete-item:last-child {
+        border-bottom: none;
+    }
+
+    .autocomplete-item:hover,
+    .autocomplete-item.selected {
+        background: var(--accent-bg);
+    }
+
+    .autocomplete-item strong {
+        display: block;
+        color: var(--text-primary);
+        margin-bottom: 0.15rem;
+        font-size: 0.85rem;
+    }
+
+    .autocomplete-item small {
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        line-height: 1.3;
+    }
+
+    .filter-actions {
+        display: flex;
+        gap: 0.35rem;
+        align-items: center;
+    }
+
+    .filter-actions .btn,
+    .filter-field .btn {
+        padding: 0.4rem 0.75rem;
+        font-size: 0.8rem;
+        height: 32px;
+        white-space: nowrap;
+    }
+
+    .active-filters {
+        display: flex;
+        gap: 0.35rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.5rem;
+    }
+
+    .filter-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.25rem 0.5rem;
+        background: var(--accent-color);
+        color: white;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .filter-badge-remove {
+        cursor: pointer;
+        font-weight: bold;
+        opacity: 0.8;
+        transition: opacity 0.2s;
+    }
+
+    .filter-badge-remove:hover {
+        opacity: 1;
+    }
+
+    /* Topbar autocomplete adjustments */
+    .topbar-filter-item .autocomplete-wrapper {
+        position: relative;
+    }
+
+    .topbar-filter-item .autocomplete-results {
+        position: absolute;
+        top: 100%;
+        left: 28px;
+        right: 0;
+        background: white;
+        border: 1px solid var(--border-color);
+        border-top: none;
+        border-radius: 0 0 4px 4px;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 10000;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+        display: none;
+        min-width: 200px;
+    }
+
+    .topbar-filter-item .autocomplete-results.active {
+        display: block;
+    }
+
+    /* Hide regular filters when topbar filters are preferred */
+    @media (min-width: 1024px) {
+        .filter-section {
+            display: none;
+        }
+    }
+
+    @media (max-width: 1023px) {
+        .topbar-filters {
+            display: none !important;
+        }
+        .filter-toggle-btn {
+            display: none !important;
+        }
+        .filter-section {
+            display: block;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="admin-header">
     <h1>Blog Posts</h1>
     <a href="{{ url_for('admin.admin_new_post') }}" class="btn">+ New Post</a>
 </div>
 
-<form method="GET" style="margin: 1rem 0; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-    <label>Category</label>
-    <select name="category" class="form-control" style="min-width: 180px;">
-        <option value="">All</option>
-        {% for c in categories or [] %}
-        <option value="{{ c.id }}" {% if selected_category == c.id %}selected{% endif %}>{{ c.name }}</option>
-        {% endfor %}
-    </select>
-    <label>Tag</label>
-    <select name="tag" class="form-control" style="min-width: 180px;">
-        <option value="">All</option>
-        {% for t in tags or [] %}
-        <option value="{{ t.id }}" {% if selected_tag == t.id %}selected{% endif %}>{{ t.name }}</option>
-        {% endfor %}
-    </select>
-    <label>Search</label>
-    <input type="text" name="q" class="form-control" placeholder="Title, excerpt, author" value="{{ search_query or '' }}" style="min-width: 240px;">
-    <label>Status</label>
-    <select name="status" class="form-control" style="min-width: 140px;">
-        <option value="" {% if not selected_status %}selected{% endif %}>All</option>
-        <option value="published" {% if selected_status == 'published' %}selected{% endif %}>Published</option>
-        <option value="draft" {% if selected_status == 'draft' %}selected{% endif %}>Draft</option>
-    </select>
-    <button type="submit" class="btn">Filter</button>
-    {% if selected_category or selected_tag or search_query or selected_status %}
-    <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary">Clear</a>
-    {% endif %}
-  </form>
+<!-- Enhanced Filter Section -->
+<div class="filter-section">
+    <form method="GET" id="filterForm">
+        <div class="filter-grid">
+            <!-- Category Filter -->
+            <div class="filter-field">
+                <label for="categorySelect">Category</label>
+                <select name="category" id="categorySelect" class="form-control">
+                    <option value="">All Categories</option>
+                    {% for c in categories or [] %}
+                    <option value="{{ c.id }}" {% if selected_category == c.id %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Tag Filter with Autocomplete -->
+            <div class="filter-field">
+                <label for="tagInput">Tag</label>
+                <div class="autocomplete-wrapper">
+                    <input
+                        type="text"
+                        id="tagInput"
+                        class="form-control"
+                        placeholder="Search tags..."
+                        autocomplete="off"
+                        value="{% if selected_tag %}{% for t in tags %}{% if t.id == selected_tag %}{{ t.name }}{% endif %}{% endfor %}{% endif %}"
+                    >
+                    <input type="hidden" name="tag" id="tagId" value="{{ selected_tag or '' }}">
+                    <div class="autocomplete-results" id="tagResults"></div>
+                </div>
+            </div>
+
+            <!-- Search with Autocomplete -->
+            <div class="filter-field">
+                <label for="searchInput">Search Posts</label>
+                <div class="autocomplete-wrapper">
+                    <input
+                        type="text"
+                        name="q"
+                        id="searchInput"
+                        class="form-control"
+                        placeholder="Title, excerpt, author..."
+                        autocomplete="off"
+                        value="{{ search_query or '' }}"
+                    >
+                    <div class="autocomplete-results" id="searchResults"></div>
+                </div>
+            </div>
+
+            <!-- Status Filter -->
+            <div class="filter-field">
+                <label for="statusSelect">Status</label>
+                <select name="status" id="statusSelect" class="form-control">
+                    <option value="" {% if not selected_status %}selected{% endif %}>All Status</option>
+                    <option value="published" {% if selected_status == 'published' %}selected{% endif %}>Published</option>
+                    <option value="draft" {% if selected_status == 'draft' %}selected{% endif %}>Draft</option>
+                    <option value="scheduled" {% if selected_status == 'scheduled' %}selected{% endif %}>Scheduled</option>
+                </select>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="filter-field" style="display: flex; gap: 0.35rem;">
+                <button type="submit" class="btn" style="flex: 1;">Apply</button>
+                {% if selected_category or selected_tag or search_query or selected_status %}
+                <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary" style="flex: 1;">Clear</a>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+</div>
 
 {% if posts %}
 <table class="posts-table">
@@ -133,6 +442,218 @@ function confirmDelete(postId, postTitle) {
             document.getElementById('deleteForm' + postId).submit();
         }
     );
+}
+
+// Autocomplete functionality
+class Autocomplete {
+    constructor(inputEl, resultsEl, apiUrl, onSelect) {
+        this.input = inputEl;
+        this.results = resultsEl;
+        this.apiUrl = apiUrl;
+        this.onSelect = onSelect;
+        this.selectedIndex = -1;
+        this.items = [];
+        this.debounceTimer = null;
+
+        this.input.addEventListener('input', () => this.handleInput());
+        this.input.addEventListener('focus', () => this.handleInput());
+        this.input.addEventListener('keydown', (e) => this.handleKeydown(e));
+        document.addEventListener('click', (e) => this.handleClickOutside(e));
+    }
+
+    handleInput() {
+        clearTimeout(this.debounceTimer);
+        this.debounceTimer = setTimeout(() => {
+            const query = this.input.value.trim();
+            this.fetchResults(query);
+        }, 300);
+    }
+
+    async fetchResults(query) {
+        try {
+            const url = `${this.apiUrl}?q=${encodeURIComponent(query)}`;
+            const response = await fetch(url);
+            const data = await response.json();
+            this.items = data;
+            this.renderResults();
+        } catch (error) {
+            console.error('Autocomplete fetch error:', error);
+            this.items = [];
+            this.renderResults();
+        }
+    }
+
+    renderResults() {
+        if (this.items.length === 0) {
+            this.results.classList.remove('active');
+            return;
+        }
+
+        this.results.innerHTML = '';
+        this.items.forEach((item, index) => {
+            const div = document.createElement('div');
+            div.className = 'autocomplete-item';
+            div.innerHTML = this.formatItem(item);
+            div.addEventListener('click', () => this.selectItem(item));
+            div.addEventListener('mouseenter', () => {
+                this.selectedIndex = index;
+                this.updateSelection();
+            });
+            this.results.appendChild(div);
+        });
+
+        this.results.classList.add('active');
+        this.selectedIndex = -1;
+    }
+
+    formatItem(item) {
+        // Default format, can be overridden
+        return `<strong>${item.name || item.title}</strong>`;
+    }
+
+    handleKeydown(e) {
+        if (!this.results.classList.contains('active')) return;
+
+        switch(e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                this.selectedIndex = Math.min(this.selectedIndex + 1, this.items.length - 1);
+                this.updateSelection();
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                this.selectedIndex = Math.max(this.selectedIndex - 1, -1);
+                this.updateSelection();
+                break;
+            case 'Enter':
+                e.preventDefault();
+                if (this.selectedIndex >= 0) {
+                    this.selectItem(this.items[this.selectedIndex]);
+                }
+                break;
+            case 'Escape':
+                this.results.classList.remove('active');
+                break;
+        }
+    }
+
+    updateSelection() {
+        const items = this.results.querySelectorAll('.autocomplete-item');
+        items.forEach((item, index) => {
+            if (index === this.selectedIndex) {
+                item.classList.add('selected');
+                item.scrollIntoView({ block: 'nearest' });
+            } else {
+                item.classList.remove('selected');
+            }
+        });
+    }
+
+    selectItem(item) {
+        this.onSelect(item);
+        this.results.classList.remove('active');
+    }
+
+    handleClickOutside(e) {
+        if (!this.input.contains(e.target) && !this.results.contains(e.target)) {
+            this.results.classList.remove('active');
+        }
+    }
+}
+
+// Initialize Tag Autocomplete (regular filters)
+const tagInput = document.getElementById('tagInput');
+const tagResults = document.getElementById('tagResults');
+const tagId = document.getElementById('tagId');
+
+if (tagInput && tagResults && tagId) {
+    const tagAutocomplete = new Autocomplete(
+        tagInput,
+        tagResults,
+        '{{ url_for("admin.api_tags_search") }}',
+        (item) => {
+            tagInput.value = item.name;
+            tagId.value = item.id;
+        }
+    );
+
+    // Clear hidden field when input is cleared
+    tagInput.addEventListener('input', () => {
+        if (tagInput.value.trim() === '') {
+            tagId.value = '';
+        }
+    });
+}
+
+// Initialize Tag Autocomplete (topbar filters)
+const topbarTagInput = document.getElementById('topbarTagInput');
+const topbarTagResults = document.getElementById('topbarTagResults');
+const topbarTagId = document.getElementById('topbarTagId');
+
+if (topbarTagInput && topbarTagResults && topbarTagId) {
+    const topbarTagAutocomplete = new Autocomplete(
+        topbarTagInput,
+        topbarTagResults,
+        '{{ url_for("admin.api_tags_search") }}',
+        (item) => {
+            topbarTagInput.value = item.name;
+            topbarTagId.value = item.id;
+        }
+    );
+
+    // Clear hidden field when input is cleared
+    topbarTagInput.addEventListener('input', () => {
+        if (topbarTagInput.value.trim() === '') {
+            topbarTagId.value = '';
+        }
+    });
+}
+
+// Initialize Search Autocomplete
+const searchInput = document.getElementById('searchInput');
+const searchResults = document.getElementById('searchResults');
+
+if (searchInput && searchResults) {
+    const searchAutocomplete = new Autocomplete(
+        searchInput,
+        searchResults,
+        '{{ url_for("admin.api_posts_search") }}',
+        (item) => {
+            searchInput.value = item.title;
+            // Optionally submit the form immediately
+            // document.getElementById('filterForm').submit();
+        }
+    );
+
+    // Override formatItem for search results
+    searchAutocomplete.formatItem = (item) => {
+        let html = `<strong>${item.title}</strong>`;
+        if (item.author) {
+            html += `<br><small>by ${item.author}</small>`;
+        }
+        if (item.excerpt) {
+            html += `<br><small>${item.excerpt}</small>`;
+        }
+        return html;
+    };
+}
+
+// Topbar Filter Toggle
+const filterToggleBtn = document.getElementById('filterToggleBtn');
+const topbarFilters = document.getElementById('topbarFilters');
+
+if (filterToggleBtn && topbarFilters) {
+    // Check if filters should be shown by default (if any filter is active)
+    const hasActiveFilters = {{ 'true' if selected_category or selected_tag or search_query or selected_status else 'false' }};
+    if (hasActiveFilters) {
+        topbarFilters.classList.add('active');
+        filterToggleBtn.classList.add('active');
+    }
+
+    filterToggleBtn.addEventListener('click', () => {
+        topbarFilters.classList.toggle('active');
+        filterToggleBtn.classList.toggle('active');
+    });
 }
 </script>
 {% endblock %}

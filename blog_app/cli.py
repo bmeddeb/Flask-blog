@@ -20,18 +20,19 @@ def register_cli(app):
     @app.cli.command("seed-db")
     def seed_db():
         """Seed the database with sample posts."""
-        from models import BlogPost
+        from models import Post
 
-        if BlogPost.query.first():
+        if Post.query.filter_by(post_type='post').first():
             print("Seed skipped: posts already exist")
             return
-        post = BlogPost(
+        post = Post(
             title="Hello World",
             slug="hello-world",
             content="# Hello World\n\nThis is your first post.",
             excerpt="This is your first post.",
             author="Admin",
-            published=True,
+            post_type='post',  # WordPress-style
+            post_status='publish',  # WordPress-style
             published_at=datetime.utcnow(),
         )
         try:
@@ -47,19 +48,20 @@ def register_cli(app):
     @app.cli.command("publish-scheduled")
     def publish_scheduled():
         """Publish scheduled posts whose publish time has arrived."""
-        from models import BlogPost
+        from models import Post
 
         now = datetime.utcnow()
         posts = (
-            BlogPost.query
-            .filter(BlogPost.published.is_(False))
-            .filter(BlogPost.published_at.isnot(None))
-            .filter(BlogPost.published_at <= now)
+            Post.query
+            .filter(Post.post_type == 'post')
+            .filter(Post.post_status == 'draft')
+            .filter(Post.published_at.isnot(None))
+            .filter(Post.published_at <= now)
             .all()
         )
         count = 0
         for p in posts:
-            p.published = True
+            p.post_status = 'publish'  # WordPress-style
             count += 1
         db.session.commit()
         print(f"Published {count} scheduled post(s) at {now.isoformat()} UTC")
