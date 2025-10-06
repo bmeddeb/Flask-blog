@@ -222,6 +222,10 @@
             <ul class="nav-links">
                 <li><a href="{{ url_for('public.index') }}">Home</a></li>
                 <li><a href="{{ url_for('public.blog_list') }}">Blog</a></li>
+                <li><a href="{{ url_for('public.projects_list') }}">Projects</a></li>
+                {% for page in get_nav_pages() %}
+                <li><a href="{{ url_for('public.view_page', slug=page.slug) }}">{{ page.title }}</a></li>
+                {% endfor %}
                 <li><a href="{{ url_for('admin.admin_dashboard') }}">Admin</a></li>
             </ul>
         </div>

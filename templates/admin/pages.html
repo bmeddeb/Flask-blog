@@ -27,8 +27,8 @@
             <td>
                 <strong>{{ page.title }}</strong>
             </td>
-            <td>{{ page.layout }}</td>
-            <td>{{ page.content_type }}</td>
+            <td>{{ page.get_meta('layout', 'full-width') }}</td>
+            <td>{{ page.get_meta('content_type', 'markdown') }}</td>
             <td>
                 {% if page.published %}
                     <span class="badge badge-success">Published</span>
@@ -37,8 +37,8 @@
                 {% endif %}
             </td>
             <td>
-                {% if page.show_in_nav %}
-                    <span class="badge badge-success">Yes ({{ page.nav_order }})</span>
+                {% if page.get_meta('show_in_nav', '0') == '1' %}
+                    <span class="badge badge-success">Yes ({{ page.get_meta('nav_order', '0') }})</span>
                 {% else %}
                     —
                 {% endif %}
@@ -67,6 +67,12 @@
         {% endfor %}
     </tbody>
 </table>
+
+<!-- Hidden delete forms -->
+{% for page in pages %}
+<form id="deletePageForm{{ page.id }}" method="POST" action="{{ url_for('admin.admin_delete_page', page_id=page.id) }}" style="display: none;">
+</form>
+{% endfor %}
 {% else %}
 <div class="empty-state">
     <h3>No pages yet</h3>
